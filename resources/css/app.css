@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+/* Scan kelas Tailwind di blade & komponen Livewire */
+@source "../views";
+@source "../../app/Livewire";
+@source "../../vendor/livewire/livewire/src/**/*.blade.php";
+
+/* ============================================================
+   Palet Niti Resik (default primary = 500)
+   ============================================================ */
+@theme {
+    --color-primary-50: #e0f8f1;
+    --color-primary-100: #a3e6d2;
+    --color-primary-500: #057d5d;
+    --color-primary-700: #046a4f; /* turunan untuk hover/active */
+    --color-primary-900: #023628;
+    --color-primary: #057d5d;      /* alias: bg-primary, text-primary, dll */
+}
