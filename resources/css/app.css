@@ -5,14 +5,31 @@
 @source "../../app/Livewire";
 @source "../../vendor/livewire/livewire/src/**/*.blade.php";
 
-/* ============================================================
-   Palet Niti Resik (default primary = 500)
-   ============================================================ */
 @theme {
+    /* Font utama */
+    --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    /* Palet Niti Resik (default primary = 500) */
     --color-primary-50: #e0f8f1;
     --color-primary-100: #a3e6d2;
     --color-primary-500: #057d5d;
-    --color-primary-700: #046a4f; /* turunan untuk hover/active */
+    --color-primary-700: #046a4f;
     --color-primary-900: #023628;
-    --color-primary: #057d5d;      /* alias: bg-primary, text-primary, dll */
+    --color-primary: #057d5d;
 }
+
+/* Konten artikel (hasil render Markdown) */
+.article-content { color: #374151; line-height: 1.75; }
+.article-content h1, .article-content h2, .article-content h3, .article-content h4 { color: #023628; font-weight: 600; margin-top: 1.5em; margin-bottom: .5em; line-height: 1.3; }
+.article-content h2 { font-size: 1.4rem; }
+.article-content h3 { font-size: 1.15rem; }
+.article-content p { margin: .75em 0; }
+.article-content ul { list-style: disc; padding-left: 1.5em; margin: .75em 0; }
+.article-content ol { list-style: decimal; padding-left: 1.5em; margin: .75em 0; }
+.article-content li { margin: .25em 0; }
+.article-content a { color: #057d5d; text-decoration: underline; }
+.article-content blockquote { border-left: 3px solid #A3E6D2; padding-left: 1em; color: #6b7280; margin: 1em 0; }
+.article-content strong { color: #023628; font-weight: 600; }
+.article-content img { border-radius: .5rem; margin: 1em 0; max-width: 100%; }
+.article-content code { background: #f3f4f6; padding: .1em .35em; border-radius: .25rem; font-size: .9em; }
+.article-content hr { margin: 1.5em 0; border-color: #e5e7eb; }

@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -16,21 +15,40 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     protected $fillable = [
-        'name', 'email', 'phone', 'phone_verified_at', 'password', 'kode_qr', 'is_active',
-        'kecamatan_id', 'kelurahan_id', 'banjar_id', 'tps_id', 'bank_sampah_id', 'umkm_id',
-        'lat', 'lng', 'nik', 'tanggal_lahir', 'jenis_kelamin',
+        'name',
+        'nik',
+        'tanggal_lahir',
+        'jenis_kelamin',
+        'nip',
+        'email',
+        'phone',
+        'phone_verified_at',
+        'password',
+        'kode_qr',
+        'is_active',
+        'kecamatan_id',
+        'kelurahan_id',
+        'banjar_id',
+        'tps_id',
+        'bank_sampah_id',
+        'umkm_id',
+        'lat',
+        'lng',
     ];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
 
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
+            'tanggal_lahir'     => 'date',
             'password'          => 'hashed',
             'is_active'         => 'boolean',
-            'tanggal_lahir' => 'date',
         ];
     }
 
