@@ -22,8 +22,15 @@ class ArtikelShow extends Component
 
     public function render()
     {
+        $konten = $this->article->konten;
+
+        // Konten baru = HTML (dari editor). Konten lama = Markdown → tetap dirender.
+        $html = str_contains($konten, '<')
+            ? $konten
+            : Str::markdown($konten, ['html_input' => 'strip', 'allow_unsafe_links' => false]);
+
         return view('livewire.public.artikel-show', [
-            'html' => Str::markdown($this->article->konten, ['html_input' => 'strip', 'allow_unsafe_links' => false]),
+            'html' => $html,
         ]);
     }
 }

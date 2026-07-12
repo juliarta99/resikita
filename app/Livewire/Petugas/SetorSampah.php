@@ -16,6 +16,9 @@ class SetorSampah extends Component
 {
     public string $kode = '';
 
+    public bool $showError = false;
+    public string $errorMsg = '';
+
     public ?int $nasabahId = null;
     public string $nasabahNama = '';
     public string $nasabahKode = '';
@@ -42,7 +45,9 @@ class SetorSampah extends Component
             ->first();
 
         if (! $nasabah) {
-            session()->flash('err', 'Nasabah tidak ditemukan untuk kode tersebut.');
+            $this->kode = '';
+            $this->errorMsg = 'Kode QR atau NIK tidak dikenali. Pastikan Anda memindai QR nasabah yang benar, lalu coba lagi.';
+            $this->showError = true;
             return;
         }
 

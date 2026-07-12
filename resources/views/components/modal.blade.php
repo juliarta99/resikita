@@ -4,7 +4,7 @@
     x-data="{ open: $wire.entangle('{{ $active }}') }"
     x-show="open"
     x-cloak
-    class="fixed inset-0 z-50 overflow-y-auto"
+    class="fixed inset-0 z-9999 overflow-y-auto"
 >
     <div x-show="open" x-transition.opacity class="fixed inset-0 bg-primary-900/40"></div>
 

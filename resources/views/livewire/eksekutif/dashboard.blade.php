@@ -1,7 +1,10 @@
 <div class="space-y-6">
-    <div>
-        <h1 class="text-2xl font-semibold text-primary-900">Dashboard {{ $scopeLabel }}</h1>
-        <p class="mt-1 text-sm text-gray-500">Ringkasan & sebaran pengelolaan sampah wilayah Anda.</p>
+    <div class="flex items-start justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-semibold text-primary-900">Dashboard {{ $scopeLabel }}</h1>
+            <p class="mt-1 text-sm text-gray-500">Ringkasan pengelolaan sampah wilayah Anda.</p>
+        </div>
+        <button wire:click="exportStatistik" class="flex-none rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50">Export Statistik</button>
     </div>
 
     {{-- Kartu statistik --}}
@@ -31,35 +34,6 @@
                 <div class="rounded-lg bg-primary-50 py-3"><p class="text-xl font-semibold text-primary-700">{{ $stats['lapSelesai'] }}</p><p class="text-xs text-primary-700/70">Selesai</p></div>
                 <div class="rounded-lg bg-red-50 py-3"><p class="text-xl font-semibold text-red-600">{{ $stats['lapDitolak'] }}</p><p class="text-xs text-red-600/70">Ditolak</p></div>
             </div>
-        </div>
-    </div>
-
-    {{-- Peta sebaran --}}
-    <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <p class="text-sm font-semibold text-primary-900">Peta Sebaran</p>
-            <div class="flex flex-wrap gap-4 text-xs text-gray-500">
-                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#0ea5e9"></span> TPS</span>
-                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#057D5D"></span> Bank Sampah</span>
-                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#f59e0b"></span> UMKM</span>
-                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#ef4444"></span> Laporan</span>
-            </div>
-        </div>
-        <div wire:ignore class="mt-3" x-data x-init="
-            const map = L.map($refs.map).setView([-8.6478, 115.1385], 11);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
-            const colors = { tps:'#0ea5e9', bank_sampah:'#057D5D', umkm:'#f59e0b', laporan:'#ef4444' };
-            const data = @js($markers);
-            const pts = [];
-            data.forEach(m => {
-                const c = colors[m.t] || '#666';
-                L.circleMarker([m.lat, m.lng], { radius:7, color:c, fillColor:c, fillOpacity:.85, weight:1 }).bindPopup(m.n).addTo(map);
-                pts.push([m.lat, m.lng]);
-            });
-            if (pts.length) { map.fitBounds(pts, { padding:[30,30], maxZoom:14 }); }
-            setTimeout(() => map.invalidateSize(), 200);
-        ">
-            <div x-ref="map" class="h-80 w-full rounded-lg border border-gray-200"></div>
         </div>
     </div>
 
@@ -128,7 +102,7 @@
         @endif
 
         @if ($rekomendasi)
-            <div class="mt-4 whitespace-pre-line text-sm leading-relaxed text-gray-700">{{ $rekomendasi->konten }}</div>
+            <div class="ai-rec mt-4">{!! \Illuminate\Support\Str::markdown($rekomendasi->konten, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}</div>
         @elseif (! $aiError)
             <div class="mt-4 rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-400">
                 Klik "Buat Rekomendasi" untuk analisis prioritas berbasis data. Disimpan untuk hari ini & bisa diekspor.

@@ -2,6 +2,10 @@
 
 use App\Http\Controllers\Auth\LogoutController;
 use App\Livewire\Admin\ArticleManager;
+use App\Livewire\Admin\Dashboard as AdminDashboard;
+use App\Livewire\Admin\ProductManager as AdminProductManager;
+use App\Livewire\Admin\Profil as AdminProfil;
+use App\Livewire\Admin\ReportManager;
 use App\Livewire\Admin\BankSampahManager;
 use App\Livewire\Admin\BanjarDinasManager;
 use App\Livewire\Admin\HargaSampahManager;
@@ -12,8 +16,13 @@ use App\Livewire\Admin\ReportCategoryManager;
 use App\Livewire\Admin\TpsManager;
 use App\Livewire\Admin\UmkmManager;
 use App\Livewire\Admin\UserManager;
+use App\Livewire\Dinas\Dashboard as DinasDashboard;
 use App\Livewire\Dinas\LaporanManager;
+use App\Livewire\Dinas\Performa as DinasPerforma;
+use App\Livewire\Dinas\PetaSebaran as DinasPetaSebaran;
+use App\Livewire\Dinas\Profil as DinasProfil;
 use App\Livewire\Eksekutif\EksekutifDashboard;
+use App\Livewire\Eksekutif\PetaSebaran as EksekutifPetaSebaran;
 use App\Livewire\Admin\PenarikanManager;
 use App\Livewire\BankSampah\Dashboard as BankSampahDashboard;
 use App\Livewire\BankSampah\HargaView;
@@ -22,10 +31,16 @@ use App\Livewire\BankSampah\PetugasManager;
 use App\Livewire\BankSampah\Profil;
 use App\Livewire\BankSampah\RiwayatSetor;
 use App\Livewire\Petugas\SetorSampah;
+use App\Livewire\Tps\Dashboard as TpsDashboard;
+use App\Livewire\Tps\InfoTps;
 use App\Livewire\Tps\IuranManager;
 use App\Livewire\Tps\MemberManager;
+use App\Livewire\Umkm\Dashboard as UmkmDashboard;
+use App\Livewire\Umkm\Keuangan as UmkmKeuangan;
 use App\Livewire\Umkm\OrderManager;
 use App\Livewire\Umkm\ProductManager;
+use App\Livewire\Umkm\Profil as UmkmProfil;
+use App\Livewire\Umkm\Rekomendasi as UmkmRekomendasi;
 use App\Livewire\Auth\Login;
 use App\Livewire\Public\ArtikelIndex;
 use App\Livewire\Public\ArtikelShow;
@@ -89,7 +104,7 @@ Route::post('/logout', LogoutController::class)->middleware('auth')->name('logou
 Route::middleware('auth')->group(function () {
 
     Route::middleware('role:super_admin|admin')->prefix('admin')->group(function () {
-        Route::view('/', 'dashboard')->name('admin.dashboard');
+        Route::get('/', AdminDashboard::class)->name('admin.dashboard');
 
         // Wilayah
         Route::get('/wilayah/kecamatan', KecamatanManager::class)->name('admin.kecamatan');
@@ -104,31 +119,44 @@ Route::middleware('auth')->group(function () {
         Route::get('/master/kategori-laporan', ReportCategoryManager::class)->name('admin.kategori-laporan');
         Route::get('/master/kategori-produk', ProductCategoryManager::class)->name('admin.kategori-produk');
 
+        // Pengawasan
+        Route::get('/laporan', ReportManager::class)->name('admin.laporan');
+        Route::get('/produk', AdminProductManager::class)->name('admin.produk');
+
         // Sistem
         Route::get('/pengguna', UserManager::class)->name('admin.pengguna');
         Route::get('/penarikan', PenarikanManager::class)->name('admin.penarikan');
         Route::get('/artikel', ArticleManager::class)->name('admin.artikel');
+        Route::get('/profil', AdminProfil::class)->name('admin.profil');
     });
 
     Route::middleware('role:admin_dinas')->prefix('dinas')->group(function () {
-        Route::get('/', LaporanManager::class)->name('dinas.dashboard');
+        Route::get('/', DinasDashboard::class)->name('dinas.dashboard');
+        Route::get('/performa', DinasPerforma::class)->name('dinas.performa');
+        Route::get('/peta', DinasPetaSebaran::class)->name('dinas.peta');
         Route::get('/laporan', LaporanManager::class)->name('dinas.laporan');
+        Route::get('/profil', DinasProfil::class)->name('dinas.profil');
     });
 
     Route::middleware('role:bupati|camat|lurah|kepala_dinas_banjar')->prefix('eksekutif')->group(function () {
         Route::get('/', EksekutifDashboard::class)->name('eksekutif.dashboard');
+        Route::get('/peta', EksekutifPetaSebaran::class)->name('eksekutif.peta');
     });
 
     Route::middleware('role:umkm')->prefix('umkm')->group(function () {
-        Route::get('/', ProductManager::class)->name('umkm.dashboard');
+        Route::get('/', UmkmDashboard::class)->name('umkm.dashboard');
         Route::get('/produk', ProductManager::class)->name('umkm.produk');
         Route::get('/pesanan', OrderManager::class)->name('umkm.pesanan');
+        Route::get('/keuangan', UmkmKeuangan::class)->name('umkm.keuangan');
+        Route::get('/rekomendasi', UmkmRekomendasi::class)->name('umkm.rekomendasi');
+        Route::get('/profil', UmkmProfil::class)->name('umkm.profil');
     });
 
     Route::middleware('role:admin_tps')->prefix('tps')->group(function () {
-        Route::get('/', MemberManager::class)->name('tps.dashboard');
+        Route::get('/', TpsDashboard::class)->name('tps.dashboard');
         Route::get('/nasabah', MemberManager::class)->name('tps.nasabah');
         Route::get('/iuran', IuranManager::class)->name('tps.iuran');
+        Route::get('/info', InfoTps::class)->name('tps.info');
     });
 
     Route::middleware('role:admin_bank_sampah|petugas_bank_sampah')->prefix('bank-sampah')->group(function () {

@@ -8,6 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-[#f5f6f8] text-primary-900 antialiased">
@@ -53,12 +56,14 @@
     </header>
 
     <nav class="border-b border-gray-200 bg-white">
-        <div class="mx-auto flex max-w-5xl gap-1 px-4">
-            @php $tab = 'border-b-2 px-3 py-3 text-sm font-medium'; @endphp
-            <a href="{{ route('umkm.produk') }}"
-               class="{{ $tab }} {{ request()->routeIs('umkm.produk', 'umkm.dashboard') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Produk</a>
-            <a href="{{ route('umkm.pesanan') }}"
-               class="{{ $tab }} {{ request()->routeIs('umkm.pesanan') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Pesanan</a>
+        <div class="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4">
+            @php $tab = 'whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium'; @endphp
+            <a href="{{ route('umkm.dashboard') }}" class="{{ $tab }} {{ request()->routeIs('umkm.dashboard') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Dashboard</a>
+            <a href="{{ route('umkm.produk') }}" class="{{ $tab }} {{ request()->routeIs('umkm.produk') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Produk</a>
+            <a href="{{ route('umkm.pesanan') }}" class="{{ $tab }} {{ request()->routeIs('umkm.pesanan') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Pesanan</a>
+            <a href="{{ route('umkm.keuangan') }}" class="{{ $tab }} {{ request()->routeIs('umkm.keuangan') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Keuangan</a>
+            <a href="{{ route('umkm.rekomendasi') }}" class="{{ $tab }} {{ request()->routeIs('umkm.rekomendasi') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Rekomendasi AI</a>
+            <a href="{{ route('umkm.profil') }}" class="{{ $tab }} {{ request()->routeIs('umkm.profil') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Profil</a>
         </div>
     </nav>
 

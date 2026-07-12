@@ -37,7 +37,7 @@ class ArticleManager extends Component
         return [
             'judul'     => 'required|string|max:255',
             'tipe'      => 'required|in:artikel,panduan,tutorial,jurnal',
-            'konten'    => 'required|string|min:20',
+            'konten'    => 'required|string',
             'status'    => 'required|in:draft,published',
             'thumbnail' => 'nullable|image|max:2048',
         ];
@@ -47,6 +47,7 @@ class ArticleManager extends Component
     {
         $this->batal();
         $this->showForm = true;
+        $this->dispatch('editor-content', konten: '');
     }
 
     public function edit(int $id)
@@ -60,6 +61,7 @@ class ArticleManager extends Component
         $this->thumbnailLama = $a->thumbnail;
         $this->thumbnail = null;
         $this->showForm = true;
+        $this->dispatch('editor-content', konten: $a->konten);
     }
 
     private function uniqueSlug(string $judul): string
@@ -76,6 +78,11 @@ class ArticleManager extends Component
     public function simpan()
     {
         $data = $this->validate();
+
+        if (mb_strlen(trim(strip_tags($this->konten))) < 10) {
+            $this->addError('konten', 'Konten terlalu pendek atau kosong.');
+            return;
+        }
 
         $attrs = [
             'tipe'   => $data['tipe'],

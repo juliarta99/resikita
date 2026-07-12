@@ -26,7 +26,7 @@ class LaporanManager extends Component
 
     public bool $showAssign = false;
     public ?int $assignId = null;
-    public string $petugasId = '';
+    public array $petugasIds = [];
 
     public bool $showReject = false;
     public ?int $rejectId = null;
@@ -106,28 +106,43 @@ class LaporanManager extends Component
     public function bukaTugas(int $id)
     {
         $this->assignId = $id;
-        $this->petugasId = '';
+        $this->petugasIds = ReportAssignment::where('report_id', $id)
+            ->pluck('petugas_id')->map(fn ($v) => (string) $v)->all();
         $this->showAssign = true;
     }
 
     public function tugaskan()
     {
-        $this->validate(['petugasId' => 'required|exists:users,id']);
+        $this->validate([
+            'petugasIds'   => 'required|array|min:1',
+            'petugasIds.*' => 'exists:users,id',
+        ]);
 
         $r = Report::find($this->assignId);
         if ($r && in_array($r->status, ['diverifikasi', 'ditugaskan'])) {
-            ReportAssignment::create([
-                'report_id'   => $r->id,
-                'petugas_id'  => $this->petugasId,
-                'assigned_by' => Auth::id(),
-                'status'      => 'ditugaskan',
-                'assigned_at' => now(),
-            ]);
+            $dipilih = collect($this->petugasIds)->map(fn ($v) => (int) $v)->unique();
+            $sekarang = ReportAssignment::where('report_id', $r->id)->pluck('petugas_id');
+
+            // Hapus penugasan yang tidak lagi dipilih
+            ReportAssignment::where('report_id', $r->id)
+                ->whereNotIn('petugas_id', $dipilih)->delete();
+
+            // Tambah penugasan baru
+            foreach ($dipilih->diff($sekarang) as $petugasId) {
+                ReportAssignment::create([
+                    'report_id'   => $r->id,
+                    'petugas_id'  => $petugasId,
+                    'assigned_by' => Auth::id(),
+                    'status'      => 'ditugaskan',
+                    'assigned_at' => now(),
+                ]);
+            }
+
             $r->update(['status' => 'ditugaskan']);
-            session()->flash('ok', 'Laporan ditugaskan ke petugas.');
+            session()->flash('ok', 'Laporan ditugaskan ke ' . $dipilih->count() . ' petugas.');
         }
 
-        $this->reset('showAssign', 'assignId', 'petugasId');
+        $this->reset('showAssign', 'assignId', 'petugasIds');
     }
 
     public function tandaiSelesai(int $id)
@@ -135,7 +150,7 @@ class LaporanManager extends Component
         $r = Report::find($id);
         if ($r && in_array($r->status, ['ditugaskan', 'proses'])) {
             $r->update(['status' => 'selesai']);
-            ReportAssignment::where('report_id', $r->id)->latest()->first()?->update(['status' => 'selesai']);
+            ReportAssignment::where('report_id', $r->id)->update(['status' => 'selesai']);
             session()->flash('ok', 'Laporan ditandai selesai.');
         }
     }
@@ -157,7 +172,7 @@ class LaporanManager extends Component
 
         $detail = null;
         if ($this->showDetail && $this->detailId) {
-            $detail = Report::with(['pelapor', 'kategori', 'banjarDinas.kelurahan', 'assignments.petugas', 'progress.petugas'])
+            $detail = Report::with(['pelapor', 'kategori', 'banjarDinas.kelurahan', 'assignments.petugas', 'progress.petugas', 'images'])
                 ->find($this->detailId);
         }
 

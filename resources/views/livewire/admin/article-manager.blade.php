@@ -77,8 +77,54 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-primary-900">Konten <span class="font-normal text-gray-400">(mendukung Markdown)</span></label>
-                    <textarea wire:model="konten" rows="10" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"></textarea>
+                    <label class="block text-sm font-medium text-primary-900">Konten</label>
+                    <div wire:ignore
+                         x-data="{
+                            quill: null,
+                            init() {
+                                this.quill = new Quill(this.$refs.editor, {
+                                    theme: 'snow',
+                                    placeholder: 'Tulis konten artikel…',
+                                    modules: {
+                                        toolbar: [
+                                            [{ header: [2, 3, false] }],
+                                            ['bold', 'italic', 'underline', 'strike'],
+                                            [{ list: 'ordered' }, { list: 'bullet' }],
+                                            ['blockquote', 'link', 'image', 'video'],
+                                            ['clean'],
+                                        ],
+                                    },
+                                });
+
+                                // Konversi URL YouTube menjadi embed yang benar
+                                const toEmbed = (url) => {
+                                    const m = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
+                                    return m ? 'https://www.youtube.com/embed/' + m[1] : url;
+                                };
+                                this.quill.getModule('toolbar').addHandler('video', () => {
+                                    const url = prompt('Tempel URL YouTube:');
+                                    if (!url) return;
+                                    const range = this.quill.getSelection(true);
+                                    this.quill.insertEmbed(range.index, 'video', toEmbed(url), 'user');
+                                    this.quill.setSelection(range.index + 1);
+                                });
+
+                                // Sinkronkan ke Livewire tanpa round-trip
+                                this.quill.on('text-change', () => {
+                                    let html = this.quill.root.innerHTML;
+                                    if (html === '<p><br></p>') html = '';
+                                    this.$wire.set('konten', html, false);
+                                });
+
+                                // Muat konten saat buka tambah/edit
+                                window.addEventListener('editor-content', (e) => {
+                                    this.quill.root.innerHTML = e.detail.konten || '';
+                                });
+                            }
+                         }">
+                        <div x-ref="editor" style="min-height:16rem"></div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-400">Gunakan tombol video pada toolbar untuk menyisipkan YouTube.</p>
                     @error('konten') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
 

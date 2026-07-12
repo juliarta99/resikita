@@ -15,7 +15,7 @@ class LaporanShow extends Component
     {
         // Laporan menunggu verifikasi / ditolak tidak diekspos ke publik
         abort_if(in_array($report->status, ['menunggu', 'ditolak'], true), 404);
-        $this->report = $report->load('kategori', 'banjarDinas');
+        $this->report = $report->load('kategori', 'banjarDinas', 'images');
     }
 
     public function render()

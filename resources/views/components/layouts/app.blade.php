@@ -10,6 +10,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-[#f5f6f8] text-primary-900 antialiased">
@@ -17,10 +20,10 @@
 
     {{-- Sidebar --}}
     <aside
-        class="fixed inset-y-0 left-0 z-50 w-64 transform bg-primary-900 text-white transition-transform duration-200 lg:translate-x-0"
+        class="fixed inset-y-0 left-0 z-50 flex w-64 transform flex-col bg-primary-900 text-white transition-transform duration-200 lg:translate-x-0"
         :class="open ? 'translate-x-0' : '-translate-x-full'">
 
-        <div class="flex h-16 items-center gap-2.5 px-6">
+        <div class="flex h-16 flex-none items-center gap-2.5 px-6">
             <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -37,7 +40,11 @@
             $idle = 'text-primary-100 hover:bg-primary-700/60 hover:text-white';
         @endphp
 
-        <nav class="mt-2 space-y-6 px-3 pb-8">
+        <nav class="mt-2 flex-1 space-y-6 overflow-y-auto px-3 pb-8">
+            <div class="space-y-1">
+                <a href="{{ route('admin.dashboard') }}" class="{{ $item }} {{ request()->routeIs('admin.dashboard') ? $active : $idle }}">Dashboard</a>
+            </div>
+
             <div>
                 <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-primary-100/60">Wilayah</p>
                 <div class="mt-2 space-y-1">
@@ -60,11 +67,20 @@
             </div>
 
             <div>
+                <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-primary-100/60">Pengawasan</p>
+                <div class="mt-2 space-y-1">
+                    <a href="{{ route('admin.laporan') }}" class="{{ $item }} {{ request()->routeIs('admin.laporan') ? $active : $idle }}">Seluruh Laporan</a>
+                    <a href="{{ route('admin.produk') }}" class="{{ $item }} {{ request()->routeIs('admin.produk') ? $active : $idle }}">Seluruh Produk</a>
+                </div>
+            </div>
+
+            <div>
                 <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-primary-100/60">Sistem</p>
                 <div class="mt-2 space-y-1">
                     <a href="{{ route('admin.pengguna') }}" class="{{ $item }} {{ request()->routeIs('admin.pengguna') ? $active : $idle }}">Manajemen Pengguna</a>
                     <a href="{{ route('admin.penarikan') }}" class="{{ $item }} {{ request()->routeIs('admin.penarikan') ? $active : $idle }}">Penarikan Saldo</a>
                     <a href="{{ route('admin.artikel') }}" class="{{ $item }} {{ request()->routeIs('admin.artikel') ? $active : $idle }}">Artikel Edukasi</a>
+                    <a href="{{ route('admin.profil') }}" class="{{ $item }} {{ request()->routeIs('admin.profil') ? $active : $idle }}">Profil</a>
                 </div>
             </div>
         </nav>

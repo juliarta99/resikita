@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-[#f5f6f8] text-primary-900 antialiased">
@@ -55,9 +56,13 @@
     </header>
 
     <nav class="border-b border-gray-200 bg-white">
-        <div class="mx-auto flex max-w-6xl gap-1 px-4">
-            <a href="{{ route('dinas.laporan') }}"
-               class="border-b-2 px-3 py-3 text-sm font-medium {{ request()->routeIs('dinas.laporan', 'dinas.dashboard') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Laporan</a>
+        <div class="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4">
+            @php $tab = 'whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium'; @endphp
+            <a href="{{ route('dinas.dashboard') }}" class="{{ $tab }} {{ request()->routeIs('dinas.dashboard') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Dashboard</a>
+            <a href="{{ route('dinas.performa') }}" class="{{ $tab }} {{ request()->routeIs('dinas.performa') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Performa</a>
+            <a href="{{ route('dinas.peta') }}" class="{{ $tab }} {{ request()->routeIs('dinas.peta') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Peta Sebaran</a>
+            <a href="{{ route('dinas.laporan') }}" class="{{ $tab }} {{ request()->routeIs('dinas.laporan') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Laporan</a>
+            <a href="{{ route('dinas.profil') }}" class="{{ $tab }} {{ request()->routeIs('dinas.profil') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Profil</a>
         </div>
     </nav>
 

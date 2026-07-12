@@ -1,0 +1,59 @@
+<div class="mx-auto max-w-2xl space-y-6">
+    <div>
+        <h1 class="text-2xl font-semibold text-primary-900">Profil</h1>
+        <p class="mt-1 text-sm text-gray-500">Kelola profil usaha dan akun Anda.</p>
+    </div>
+
+    {{-- Profil usaha --}}
+    <form wire:submit="simpanUsaha" class="space-y-5 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <p class="text-sm font-semibold text-primary-900">Profil Usaha</p>
+        @if (session('okUsaha'))<div class="rounded-lg border border-primary-100 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700">{{ session('okUsaha') }}</div>@endif
+
+        <div>
+            <label class="block text-sm font-medium text-primary-900">Nama Usaha</label>
+            <input wire:model="nama" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+            @error('nama')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-primary-900">Deskripsi</label>
+            <textarea wire:model="deskripsi" rows="3" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"></textarea>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div><label class="block text-sm font-medium text-primary-900">No. HP</label><input wire:model="no_hp" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"></div>
+            <div><label class="block text-sm font-medium text-primary-900">Alamat</label><input wire:model="alamat" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"></div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-primary-900">Titik Lokasi</label>
+            <div class="mt-1"><x-map-picker :lat="$lat" :lng="$lng" /></div>
+            <div class="mt-2 grid grid-cols-2 gap-3">
+                <div><label class="block text-xs font-medium text-gray-500">Latitude</label><input wire:model.blur="lat" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">@error('lat')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror</div>
+                <div><label class="block text-xs font-medium text-gray-500">Longitude</label><input wire:model.blur="lng" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">@error('lng')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror</div>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-primary-900">Foto</label>
+            <div class="mt-2 flex items-center gap-4">
+                @if ($foto && method_exists($foto, 'temporaryUrl'))<img src="{{ $foto->temporaryUrl() }}" class="h-24 w-24 rounded-lg border border-gray-200 object-cover">
+                @elseif ($fotoLama)<img src="{{ asset('storage/' . $fotoLama) }}" class="h-24 w-24 rounded-lg border border-gray-200 object-cover">
+                @else<div class="flex h-24 w-24 items-center justify-center rounded-lg border border-dashed border-gray-300 text-xs text-gray-400">Tanpa foto</div>@endif
+                <input type="file" wire:model="foto" accept="image/*" class="text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100">
+            </div>
+            <div wire:loading wire:target="foto" class="mt-1 text-xs text-gray-400">Mengunggah…</div>
+            @error('foto')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+        </div>
+
+        <div class="flex justify-end"><button type="submit" class="rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700">Simpan Usaha</button></div>
+    </form>
+
+    {{-- Akun --}}
+    <form wire:submit="simpanAkun" class="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <p class="text-sm font-semibold text-primary-900">Akun</p>
+        @if (session('okAkun'))<div class="rounded-lg border border-primary-100 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700">{{ session('okAkun') }}</div>@endif
+        <div><label class="block text-sm font-medium text-primary-900">Nama Pemilik</label><input wire:model="ownerName" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">@error('ownerName')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror</div>
+        <div><label class="block text-sm font-medium text-primary-900">Email</label><input type="email" wire:model="email" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">@error('email')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror</div>
+        <div><label class="block text-sm font-medium text-primary-900">Kata sandi baru <span class="font-normal text-gray-400">(kosongkan jika tidak diubah)</span></label><input type="password" wire:model="password" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">@error('password')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror</div>
+        <div class="flex justify-end"><button type="submit" class="rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700">Simpan Akun</button></div>
+    </form>
+</div>

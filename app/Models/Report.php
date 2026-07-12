@@ -51,4 +51,10 @@ class Report extends Model
     {
         return $this->hasMany(ReportProgress::class);
     }
+
+    /** Bukti laporan berupa gambar (bisa lebih dari satu). */
+    public function images(): HasMany
+    {
+        return $this->hasMany(ReportImage::class);
+    }
 }

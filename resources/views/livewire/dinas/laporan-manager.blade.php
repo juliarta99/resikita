@@ -102,6 +102,16 @@
                     <div class="col-span-2"><span class="text-gray-400">Alamat:</span> <span class="text-primary-900">{{ $detail->alamat ?? '—' }} {{ $detail->banjarDinas ? '(' . $detail->banjarDinas->nama . ')' : '' }}</span></div>
                 </div>
 
+                @if ($detail->foto || $detail->images->isNotEmpty())
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400">Bukti Laporan</p>
+                        <div class="mt-2 grid grid-cols-3 gap-2">
+                            @if ($detail->foto)<a href="{{ asset('storage/' . $detail->foto) }}" target="_blank"><img src="{{ asset('storage/' . $detail->foto) }}" class="aspect-square w-full rounded-lg border border-gray-200 object-cover" alt=""></a>@endif
+                            @foreach ($detail->images as $img)<a href="{{ asset('storage/' . $img->path) }}" target="_blank"><img src="{{ asset('storage/' . $img->path) }}" class="aspect-square w-full rounded-lg border border-gray-200 object-cover" alt=""></a>@endforeach
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Peta lokasi --}}
                 <div wire:ignore x-data="{ map: null, marker: null }"
                      @detail-opened.window="
@@ -123,10 +133,12 @@
 
                 @if ($detail->assignments->isNotEmpty())
                     <div>
-                        <p class="text-xs font-semibold text-gray-400">Penugasan</p>
-                        <p class="mt-1 text-primary-900">{{ $detail->assignments->last()->petugas?->name }}
-                            <span class="text-xs text-gray-400">· {{ $detail->assignments->last()->assigned_at?->format('d M Y H:i') }}</span>
-                        </p>
+                        <p class="text-xs font-semibold text-gray-400">Penugasan ({{ $detail->assignments->count() }})</p>
+                        <ul class="mt-1 space-y-1">
+                            @foreach ($detail->assignments as $a)
+                                <li class="text-primary-900">{{ $a->petugas?->name }} <span class="text-xs text-gray-400">· {{ $a->assigned_at?->format('d M Y H:i') }}</span></li>
+                            @endforeach
+                        </ul>
                     </div>
                 @endif
 
@@ -158,14 +170,19 @@
                 <h2 class="text-base font-semibold text-primary-900">Tugaskan Petugas</h2>
             </div>
             <div class="px-6 py-5">
-                <label class="block text-sm font-medium text-primary-900">Petugas Lapangan</label>
-                <select wire:model="petugasId" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                    <option value="">— Pilih petugas —</option>
-                    @foreach ($petugasList as $p)
-                        <option value="{{ $p->id }}">{{ $p->name }}</option>
-                    @endforeach
-                </select>
-                @error('petugasId') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                <label class="block text-sm font-medium text-primary-900">Petugas Lapangan <span class="font-normal text-gray-400">(bisa lebih dari satu)</span></label>
+                <div class="mt-2 max-h-64 space-y-1 overflow-y-auto rounded-lg border border-gray-200 p-2">
+                    @forelse ($petugasList as $p)
+                        <label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50">
+                            <input type="checkbox" value="{{ $p->id }}" wire:model="petugasIds" class="rounded border-gray-300 text-primary-500 focus:ring-primary-500">
+                            <span class="text-sm text-primary-900">{{ $p->name }}</span>
+                        </label>
+                    @empty
+                        <p class="px-2 py-2 text-sm text-gray-400">Belum ada petugas lapangan.</p>
+                    @endforelse
+                </div>
+                @error('petugasIds') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('petugasIds.*') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
                 <button type="button" wire:click="$set('showAssign', false)" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-primary-900 hover:bg-gray-50">Batal</button>

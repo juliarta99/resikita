@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Eksekutif;
 
+use App\Exports\TableExport;
 use App\Models\AiRecommendation;
 use App\Models\BankSampah;
-use App\Models\BanjarDinas;
 use App\Models\Report;
 use App\Models\Tps;
 use App\Models\Umkm;
@@ -18,31 +18,10 @@ use Livewire\Component;
 #[Layout('components.layouts.eksekutif')]
 class EksekutifDashboard extends Component
 {
+    use ResolvesScope;
+
     public bool $aiError = false;
     public string $aiErrorMsg = '';
-
-    /** Tentukan cakupan wilayah berdasarkan peran. */
-    private function scope(): array
-    {
-        /** @var \App\Models\User $u */
-        $u = Auth::user();
-
-        if ($u->hasRole('bupati')) {
-            return ['type' => 'kabupaten', 'id' => null, 'label' => 'Kabupaten Badung',
-                'banjarIds' => BanjarDinas::pluck('id')];
-        }
-        if ($u->hasRole('camat')) {
-            return ['type' => 'kecamatan', 'id' => $u->kecamatan_id, 'label' => 'Kecamatan ' . ($u->kecamatan?->nama ?? '-'),
-                'banjarIds' => BanjarDinas::whereHas('kelurahan', fn ($q) => $q->where('kecamatan_id', $u->kecamatan_id))->pluck('id')];
-        }
-        if ($u->hasRole('lurah')) {
-            return ['type' => 'kelurahan', 'id' => $u->kelurahan_id, 'label' => ($u->kelurahan?->nama ?? '-'),
-                'banjarIds' => BanjarDinas::where('kelurahan_id', $u->kelurahan_id)->pluck('id')];
-        }
-
-        return ['type' => 'banjar', 'id' => $u->banjar_id, 'label' => ($u->banjarDinas?->nama ?? '-'),
-            'banjarIds' => collect([$u->banjar_id])];
-    }
 
     private function stats(array $scope): array
     {
@@ -70,27 +49,6 @@ class EksekutifDashboard extends Component
         ];
     }
 
-    private function markers(array $scope): array
-    {
-        $banjarIds = $scope['banjarIds'];
-        $out = [];
-
-        foreach (Tps::whereIn('banjar_id', $banjarIds)->whereNotNull('lat')->whereNotNull('lng')->get() as $t) {
-            $out[] = ['t' => 'tps', 'n' => $t->nama, 'lat' => (float) $t->lat, 'lng' => (float) $t->lng];
-        }
-        foreach (BankSampah::whereIn('banjar_id', $banjarIds)->whereNotNull('lat')->whereNotNull('lng')->get() as $b) {
-            $out[] = ['t' => 'bank_sampah', 'n' => $b->nama, 'lat' => (float) $b->lat, 'lng' => (float) $b->lng];
-        }
-        foreach (Umkm::whereIn('banjar_id', $banjarIds)->whereNotNull('lat')->whereNotNull('lng')->get() as $m) {
-            $out[] = ['t' => 'umkm', 'n' => $m->nama, 'lat' => (float) $m->lat, 'lng' => (float) $m->lng];
-        }
-        foreach (Report::whereIn('banjar_id', $banjarIds)->whereNotNull('lat')->whereNotNull('lng')->whereNotIn('status', ['selesai', 'ditolak'])->get() as $r) {
-            $out[] = ['t' => 'laporan', 'n' => $r->judul, 'lat' => (float) $r->lat, 'lng' => (float) $r->lng];
-        }
-
-        return $out;
-    }
-
     private function tren(array $scope): array
     {
         $bankSampahIds = BankSampah::whereIn('banjar_id', $scope['banjarIds'])->pluck('id');
@@ -100,8 +58,7 @@ class EksekutifDashboard extends Component
             $m = now()->subMonths($i);
             $labels[] = $m->format('M Y');
             $data[] = (float) WasteDeposit::whereIn('bank_sampah_id', $bankSampahIds)
-                ->whereYear('created_at', $m->year)->whereMonth('created_at', $m->month)
-                ->sum('total_nilai');
+                ->whereYear('created_at', $m->year)->whereMonth('created_at', $m->month)->sum('total_nilai');
         }
 
         return ['labels' => $labels, 'data' => $data];
@@ -162,6 +119,31 @@ class EksekutifDashboard extends Component
         );
     }
 
+    public function exportStatistik()
+    {
+        $scope = $this->scope();
+        $s = $this->stats($scope);
+
+        $rows = [
+            ['Wilayah', $scope['label']],
+            ['Periode', now()->format('d M Y')],
+            ['Warga terdaftar', $s['warga']],
+            ['Bank sampah', $s['bankSampah']],
+            ['TPS', $s['tps']],
+            ['UMKM aktif', $s['umkm']],
+            ['Setoran bulan ini (Rp)', $s['setoranNilai']],
+            ['Setoran bulan ini (kg)', $s['setoranBerat']],
+            ['Jumlah transaksi setoran', $s['setoranJumlah']],
+            ['Laporan total', $s['lapTotal']],
+            ['Laporan menunggu', $s['lapMenunggu']],
+            ['Laporan diproses', $s['lapProses']],
+            ['Laporan selesai', $s['lapSelesai']],
+            ['Laporan ditolak', $s['lapDitolak']],
+        ];
+
+        return (new TableExport(['Metrik', 'Nilai'], $rows, 'Statistik'))->download('statistik-' . $scope['type'] . '-' . now()->format('Ymd') . '.xls');
+    }
+
     public function render()
     {
         $scope = $this->scope();
@@ -171,7 +153,6 @@ class EksekutifDashboard extends Component
         return view('livewire.eksekutif.dashboard', [
             'scopeLabel'  => $scope['label'],
             'stats'       => $stats,
-            'markers'     => $this->markers($scope),
             'trenLabels'  => $tren['labels'],
             'trenData'    => $tren['data'],
             'lapData'     => [$stats['lapMenunggu'], $stats['lapProses'], $stats['lapSelesai'], $stats['lapDitolak']],

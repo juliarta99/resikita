@@ -1,7 +1,12 @@
 <div class="mx-auto max-w-6xl space-y-6">
-    <div>
-        <h1 class="text-2xl font-semibold text-primary-900">Manajemen Pengguna</h1>
-        <p class="mt-1 text-sm text-gray-500">Kelola status akun dan reset kata sandi seluruh pengguna.</p>
+    <div class="flex items-start justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-semibold text-primary-900">Manajemen Pengguna</h1>
+            <p class="mt-1 text-sm text-gray-500">Kelola status akun dan reset kata sandi seluruh pengguna.</p>
+        </div>
+        @role('super_admin')
+            <button wire:click="bukaTambahAdmin" class="flex-none rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">+ Tambah Admin</button>
+        @endrole
     </div>
 
     @if (session('ok'))
@@ -84,6 +89,37 @@
     <div>{{ $users->links() }}</div>
 
     {{-- Modal reset kata sandi --}}
+    {{-- Modal tambah admin (super_admin) --}}
+    <x-modal active="showCreate" max-width="max-w-md">
+        <form wire:submit="simpanAdmin">
+            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                <h2 class="text-base font-semibold text-primary-900">Tambah Admin</h2>
+                <button type="button" wire:click="$set('showCreate', false)" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <div class="space-y-4 px-6 py-5">
+                <div>
+                    <label class="block text-sm font-medium text-primary-900">Nama</label>
+                    <input wire:model="name" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                    @error('name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-primary-900">Email</label>
+                    <input type="email" wire:model="email" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                    @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-primary-900">Kata sandi</label>
+                    <input type="text" wire:model="password" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                    @error('password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+                <button type="button" wire:click="$set('showCreate', false)" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-primary-900 hover:bg-gray-50">Batal</button>
+                <button type="submit" class="rounded-lg bg-primary-500 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-700">Simpan</button>
+            </div>
+        </form>
+    </x-modal>
+
     <x-modal active="showReset" max-width="max-w-md">
         <div class="border-b border-gray-200 px-6 py-4">
             <h2 class="text-base font-semibold text-primary-900">Reset Kata Sandi</h2>

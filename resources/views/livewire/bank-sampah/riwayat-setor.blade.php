@@ -8,7 +8,7 @@
         </div>
         @if ($isAdmin)
             <button wire:click="export" class="flex-none rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50">
-                Export CSV
+                Export Excel
             </button>
         @endif
     </div>

@@ -33,3 +33,20 @@
 .article-content img { border-radius: .5rem; margin: 1em 0; max-width: 100%; }
 .article-content code { background: #f3f4f6; padding: .1em .35em; border-radius: .25rem; font-size: .9em; }
 .article-content hr { margin: 1.5em 0; border-color: #e5e7eb; }
+
+/* Embed video (YouTube) di konten artikel */
+.article-content iframe,
+.article-content .ql-video { width: 100%; aspect-ratio: 16 / 9; height: auto; border: 0; border-radius: .5rem; margin: 1em 0; }
+
+/* Penyajian rekomendasi AI (hasil Markdown → HTML) */
+.ai-rec { color: #374151; font-size: .875rem; line-height: 1.65; }
+.ai-rec > *:first-child { margin-top: 0; }
+.ai-rec h1, .ai-rec h2, .ai-rec h3, .ai-rec h4 { margin: 1.1em 0 .35em; font-weight: 600; color: #023628; font-size: .95rem; line-height: 1.3; }
+.ai-rec p { margin: .5em 0; }
+.ai-rec strong { font-weight: 600; color: #023628; }
+.ai-rec ul { margin: .5em 0; padding-left: 1.1rem; list-style: disc; }
+.ai-rec ol { margin: .5em 0; padding-left: 1.25rem; list-style: decimal; }
+.ai-rec li { margin: .25em 0; }
+.ai-rec li::marker { color: #057D5D; }
+.ai-rec blockquote { margin: .6em 0; padding-left: .75rem; border-left: 3px solid #A3E6D2; color: #4b5563; }
+.ai-rec a { color: #046A4F; text-decoration: underline; }

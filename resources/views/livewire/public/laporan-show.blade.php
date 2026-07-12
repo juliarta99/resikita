@@ -15,6 +15,14 @@
         <img src="{{ asset('storage/' . $report->foto) }}" class="mt-6 aspect-video w-full rounded-2xl border border-gray-200 object-cover" alt="">
     @endif
 
+    @if ($report->images->isNotEmpty())
+        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            @foreach ($report->images as $img)
+                <a href="{{ asset('storage/' . $img->path) }}" target="_blank"><img src="{{ asset('storage/' . $img->path) }}" class="aspect-square w-full rounded-xl border border-gray-200 object-cover" alt=""></a>
+            @endforeach
+        </div>
+    @endif
+
     @if ($report->deskripsi)
         <p class="mt-6 text-sm leading-relaxed text-gray-700">{{ $report->deskripsi }}</p>
     @endif
@@ -23,7 +31,8 @@
         <div wire:ignore class="mt-6" x-data x-init="
             const map = L.map($refs.map).setView([{{ $report->lat }}, {{ $report->lng }}], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(map);
-            L.marker([{{ $report->lat }}, {{ $report->lng }}]).addTo(map);
+            const pin = (c) => L.divIcon({ className:'', iconSize:[26,36], iconAnchor:[13,36], popupAnchor:[0,-32], html:`<svg width='26' height='36' viewBox='0 0 26 36' xmlns='http://www.w3.org/2000/svg'><path d='M13 0C5.8 0 0 5.8 0 13c0 9.2 13 23 13 23s13-13.8 13-23C26 5.8 20.2 0 13 0z' fill='${c}'/><circle cx='13' cy='13' r='5' fill='white'/></svg>` });
+            L.marker([{{ $report->lat }}, {{ $report->lng }}], { icon: pin('#ef4444') }).addTo(map);
             setTimeout(()=>map.invalidateSize(),200);
         "><div x-ref="map" class="h-64 w-full rounded-2xl border border-gray-200"></div></div>
     @endif

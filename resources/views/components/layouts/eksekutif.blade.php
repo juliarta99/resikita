@@ -55,6 +55,14 @@
         </div>
     </header>
 
+    <nav class="border-b border-gray-200 bg-white">
+        <div class="mx-auto flex max-w-6xl gap-1 px-4">
+            @php $tab = 'whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium'; @endphp
+            <a href="{{ route('eksekutif.dashboard') }}" class="{{ $tab }} {{ request()->routeIs('eksekutif.dashboard') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Dashboard</a>
+            <a href="{{ route('eksekutif.peta') }}" class="{{ $tab }} {{ request()->routeIs('eksekutif.peta') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Peta Sebaran</a>
+        </div>
+    </nav>
+
     <main class="mx-auto max-w-6xl px-4 py-6">
         {{ $slot }}
     </main>
