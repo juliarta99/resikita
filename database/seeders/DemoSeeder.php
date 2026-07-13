@@ -231,9 +231,12 @@ class DemoSeeder extends Seeder
         for ($i = 0; $i < 30; $i++) {
             $b = $this->faker->randomElement($banjars);
             $u = $this->makeUser(array_merge([
-                'name'    => $this->faker->name(),
-                'email'   => 'warga' . ($i + 1) . '@mail.test',
-                'kode_qr' => 'NR' . str_pad((string) ($this->seq + 1), 8, '0', STR_PAD_LEFT),
+                'name'              => $this->faker->name(),
+                'email'             => 'warga' . ($i + 1) . '@mail.test',
+                'nik'               => str_pad((string) (5100000000000000 + $i + 1), 16, '0', STR_PAD_LEFT),
+                'phone'             => '628' . str_pad((string) (1100000000 + $i + 1), 11, '0', STR_PAD_LEFT),
+                'phone_verified_at' => now(),
+                'kode_qr'           => 'NR' . str_pad((string) ($this->seq + 1), 8, '0', STR_PAD_LEFT),
             ], $this->coord()), 'masyarakat', [
                 'kecamatan_id' => $b->kelurahan->kecamatan_id,
                 'kelurahan_id' => $b->kelurahan_id,

@@ -4,150 +4,159 @@ namespace App\Livewire\Admin;
 
 use App\Models\Article;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
-#[Layout('components.layouts.app')]
+#[Layout('layouts.app')] // sesuaikan dengan layout admin Anda bila berbeda
 class ArticleManager extends Component
 {
-    use WithFileUploads;
-    use WithPagination;
+    use WithFileUploads, WithPagination;
 
+    // Filter
+    public string $search = '';
+    public string $filterTipe = '';
+    public string $filterStatus = '';
+
+    // Form
     public bool $showForm = false;
-    public bool $showDelete = false;
-    public ?int $deleteId = null;
+    public ?int $articleId = null;
 
-    public ?int $editingId = null;
     public string $judul = '';
+    public string $slug = '';
     public string $tipe = 'artikel';
-    public string $konten = '';
     public string $status = 'draft';
-
-    public $thumbnail;
-    public ?string $thumbnailLama = null;
-
-    public array $tipeList = ['artikel' => 'Artikel', 'panduan' => 'Panduan', 'tutorial' => 'Tutorial', 'jurnal' => 'Jurnal'];
+    public bool $is_unggulan = false;
+    public ?string $video_url = null;
+    public ?string $published_at = null;
+    public string $konten = '';
+    public $thumbnail = null;               // file baru (upload)
+    public ?string $existingThumbnail = null;
 
     protected function rules(): array
     {
         return [
-            'judul'     => 'required|string|max:255',
-            'tipe'      => 'required|in:artikel,panduan,tutorial,jurnal',
-            'konten'    => 'required|string',
-            'status'    => 'required|in:draft,published',
-            'thumbnail' => 'nullable|image|max:2048',
+            'judul'        => 'required|string|max:255',
+            'slug'         => 'required|string|max:255|unique:articles,slug,' . ($this->articleId ?? 'NULL') . ',id',
+            'tipe'         => 'required|in:artikel,panduan,tutorial,jurnal',
+            'status'       => 'required|in:draft,published',
+            'is_unggulan'  => 'boolean',
+            'video_url'    => 'nullable|url|max:255',
+            'published_at' => 'nullable|date',
+            'konten'       => 'required|string',
+            'thumbnail'    => 'nullable|image|max:4096',
         ];
     }
 
-    public function tambah()
+    protected array $messages = [
+        'konten.required' => 'Konten artikel wajib diisi.',
+        'video_url.url'   => 'URL video tidak valid.',
+    ];
+
+    public function updatedJudul($value): void
     {
-        $this->batal();
-        $this->showForm = true;
-        $this->dispatch('editor-content', konten: '');
+        if (! $this->articleId) {
+            $this->slug = Str::slug($value);
+        }
     }
 
-    public function edit(int $id)
+    public function updatingSearch(): void { $this->resetPage(); }
+    public function updatingFilterTipe(): void { $this->resetPage(); }
+    public function updatingFilterStatus(): void { $this->resetPage(); }
+
+    public function create(): void
+    {
+        $this->resetForm();
+        $this->tipe = 'artikel';
+        $this->status = 'draft';
+        $this->published_at = now()->format('Y-m-d');
+        $this->showForm = true;
+        $this->dispatch('editor-set', html: '');
+    }
+
+    public function edit(int $id): void
     {
         $a = Article::findOrFail($id);
-        $this->editingId = $a->id;
-        $this->judul = $a->judul;
-        $this->tipe = $a->tipe;
-        $this->konten = $a->konten;
-        $this->status = $a->status;
-        $this->thumbnailLama = $a->thumbnail;
-        $this->thumbnail = null;
-        $this->showForm = true;
-        $this->dispatch('editor-content', konten: $a->konten);
+        $this->articleId        = $a->id;
+        $this->judul            = $a->judul;
+        $this->slug             = $a->slug;
+        $this->tipe             = $a->tipe;
+        $this->status           = $a->status;
+        $this->is_unggulan      = (bool) $a->is_unggulan;
+        $this->video_url        = $a->video_url;
+        $this->published_at     = $a->published_at?->format('Y-m-d');
+        $this->konten           = $a->konten ?? '';
+        $this->existingThumbnail = $a->thumbnail;
+        $this->thumbnail        = null;
+        $this->showForm         = true;
+        $this->dispatch('editor-set', html: $this->konten);
     }
 
-    private function uniqueSlug(string $judul): string
-    {
-        $base = Str::slug($judul) ?: 'artikel';
-        $slug = $base;
-        $i = 1;
-        while (Article::where('slug', $slug)->where('id', '!=', $this->editingId ?? 0)->exists()) {
-            $slug = $base . '-' . (++$i);
-        }
-        return $slug;
-    }
-
-    public function simpan()
+    public function save(): void
     {
         $data = $this->validate();
 
-        if (mb_strlen(trim(strip_tags($this->konten))) < 10) {
-            $this->addError('konten', 'Konten terlalu pendek atau kosong.');
-            return;
-        }
-
-        $attrs = [
-            'tipe'   => $data['tipe'],
-            'judul'  => $data['judul'],
-            'konten' => $data['konten'],
-            'status' => $data['status'],
+        $payload = [
+            'judul'        => $data['judul'],
+            'slug'         => $data['slug'],
+            'tipe'         => $data['tipe'],
+            'status'       => $data['status'],
+            'is_unggulan'  => $this->is_unggulan,
+            'video_url'    => $data['video_url'] ?: null,
+            'published_at' => $data['published_at'] ?: null,
+            'konten'       => $data['konten'],
         ];
 
         if ($this->thumbnail) {
-            if ($this->editingId && $this->thumbnailLama) {
-                Storage::disk('public')->delete($this->thumbnailLama);
-            }
-            $attrs['thumbnail'] = $this->thumbnail->store('articles', 'public');
+            $payload['thumbnail'] = $this->thumbnail->store('articles', 'public');
         }
 
-        if ($this->editingId) {
-            $article = Article::findOrFail($this->editingId);
-            if ($data['status'] === 'published' && ! $article->published_at) {
-                $attrs['published_at'] = now();
-            }
-            $article->update($attrs);
-            $pesan = 'Artikel diperbarui.';
+        if ($this->articleId) {
+            Article::findOrFail($this->articleId)->update($payload);
+            $msg = 'Artikel berhasil diperbarui.';
         } else {
-            $attrs['author_id'] = Auth::id();
-            $attrs['slug'] = $this->uniqueSlug($data['judul']);
-            $attrs['published_at'] = $data['status'] === 'published' ? now() : null;
-            Article::create($attrs);
-            $pesan = 'Artikel dibuat.';
+            $payload['author_id'] = Auth::id();
+            Article::create($payload);
+            $msg = 'Artikel berhasil dibuat.';
         }
 
-        $this->batal();
-        session()->flash('ok', $pesan);
+        $this->showForm = false;
+        $this->resetForm();
+        session()->flash('ok', $msg);
     }
 
-    public function konfirmHapus(int $id)
+    public function delete(int $id): void
     {
-        $this->deleteId = $id;
-        $this->showDelete = true;
+        Article::findOrFail($id)->delete();
+        session()->flash('ok', 'Artikel dihapus.');
     }
 
-    public function hapus()
+    public function toggleUnggulan(int $id): void
     {
-        $this->showDelete = false;
-        $a = Article::find($this->deleteId);
-        $this->deleteId = null;
-        if ($a) {
-            if ($a->thumbnail) {
-                Storage::disk('public')->delete($a->thumbnail);
-            }
-            $a->delete();
-            session()->flash('ok', 'Artikel dihapus.');
-        }
+        $a = Article::findOrFail($id);
+        $a->update(['is_unggulan' => ! $a->is_unggulan]);
     }
 
-    public function batal()
+    public function resetForm(): void
     {
-        $this->reset('showForm', 'editingId', 'judul', 'tipe', 'konten', 'status', 'thumbnail', 'thumbnailLama');
-        $this->tipe = 'artikel';
-        $this->status = 'draft';
+        $this->reset([
+            'articleId', 'judul', 'slug', 'tipe', 'status', 'is_unggulan',
+            'video_url', 'published_at', 'konten', 'thumbnail', 'existingThumbnail',
+        ]);
+        $this->resetErrorBag();
     }
 
     public function render()
     {
-        return view('livewire.admin.article-manager', [
-            'daftar' => Article::with('author')->latest()->paginate(10),
-        ]);
+        $articles = Article::with('author')
+            ->when($this->search, fn ($q) => $q->where('judul', 'like', "%{$this->search}%"))
+            ->when($this->filterTipe, fn ($q) => $q->where('tipe', $this->filterTipe))
+            ->when($this->filterStatus, fn ($q) => $q->where('status', $this->filterStatus))
+            ->latest()
+            ->paginate(10);
+
+        return view('livewire.admin.article-manager', compact('articles'));
     }
 }
