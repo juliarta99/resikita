@@ -72,11 +72,13 @@
                 <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#f59e0b"></span> UMKM</span>
             </div>
             <div wire:ignore class="mt-4" x-data x-init="
+                const pin = (c) => L.divIcon({ className:'', iconSize:[26,36], iconAnchor:[13,36], popupAnchor:[0,-32],
+                    html:`<svg width='26' height='36' viewBox='0 0 26 36' xmlns='http://www.w3.org/2000/svg'><path d='M13 0C5.8 0 0 5.8 0 13c0 9.2 13 23 13 23s13-13.8 13-23C26 5.8 20.2 0 13 0z' fill='${c}'/><circle cx='13' cy='13' r='5' fill='white'/></svg>` });
                 const map = L.map($refs.map).setView([-8.6478, 115.1385], 11);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
                 const colors = { tps:'#0ea5e9', bank_sampah:'#057D5D', umkm:'#f59e0b' };
                 const data = @js($markers); const pts = [];
-                data.forEach(m => { const c = colors[m.t]||'#666'; L.circleMarker([m.lat,m.lng],{radius:7,color:c,fillColor:c,fillOpacity:.85,weight:1}).bindPopup(m.n).addTo(map); pts.push([m.lat,m.lng]); });
+                data.forEach(m => { L.marker([m.lat,m.lng],{icon:pin(colors[m.t]||'#666')}).bindPopup(m.n).addTo(map); pts.push([m.lat,m.lng]); });
                 if (pts.length) map.fitBounds(pts,{padding:[30,30],maxZoom:13});
                 setTimeout(()=>map.invalidateSize(),200);
             ">
