@@ -23,12 +23,9 @@ class ArticleController extends Controller
 
         $sort = $request->query('sort');
 
-        // Mode unggulan dengan fallback: unggulan -> populer -> terbaru
         if ($request->boolean('unggulan')) {
             $q = (clone $base)->where('is_unggulan', true)->orderByDesc('dilihat');
-
-            // Kalau belum ada artikel unggulan, pakai yang terpopuler
-            if (! $q->exists()) {
+            if (! $q->exists()) {                       // fallback: tak ada unggulan -> terpopuler -> terbaru
                 $q = (clone $base)->orderByDesc('dilihat')->latest('published_at');
             }
         } else {

@@ -16,7 +16,7 @@ class ChatConversationController extends Controller
             ->map(fn ($c) => [
                 'id'           => $c->id,
                 'title'        => $c->title,
-                'jumlah_pesan' => count($c->messages ?? []),
+                'jumlah_pesan' => count($this->messagesArray($c)),
                 'cuplikan'     => $this->lastText($c),
                 'updated_at'   => $c->updated_at?->toIso8601String(),
             ]);
@@ -32,7 +32,7 @@ class ChatConversationController extends Controller
         return response()->json(['data' => [
             'id'         => $conversation->id,
             'title'      => $conversation->title,
-            'messages'   => $conversation->messages ?? [],
+            'messages'   => $this->messagesArray($conversation),
             'updated_at' => $conversation->updated_at?->toIso8601String(),
         ]]);
     }
@@ -58,9 +58,23 @@ class ChatConversationController extends Controller
         return response()->json(['message' => 'Percakapan dihapus.']);
     }
 
+    /** Selalu kembalikan array pesan, walau kolom terbaca sebagai string JSON. */
+    private function messagesArray(ChatConversation $c): array
+    {
+        $m = $c->messages;
+        if (is_string($m)) {
+            $m = json_decode($m, true);
+        }
+        return is_array($m) ? $m : [];
+    }
+
     private function lastText(ChatConversation $c): string
     {
-        $m = $c->messages ?? [];
-        return count($m) ? (end($m)['text'] ?? '') : '';
+        $m = $this->messagesArray($c);
+        if (! $m) {
+            return '';
+        }
+        $last = end($m);
+        return is_array($last) ? ($last['text'] ?? '') : '';
     }
 }

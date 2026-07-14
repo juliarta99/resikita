@@ -62,6 +62,7 @@
             <a href="{{ route('umkm.produk') }}" class="{{ $tab }} {{ request()->routeIs('umkm.produk') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Produk</a>
             <a href="{{ route('umkm.pesanan') }}" class="{{ $tab }} {{ request()->routeIs('umkm.pesanan') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Pesanan</a>
             <a href="{{ route('umkm.keuangan') }}" class="{{ $tab }} {{ request()->routeIs('umkm.keuangan') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Keuangan</a>
+            <a href="{{ route('umkm.saldo') }}" class="{{ $tab }} {{ request()->routeIs('umkm.saldo') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Saldo</a>
             <a href="{{ route('umkm.rekomendasi') }}" class="{{ $tab }} {{ request()->routeIs('umkm.rekomendasi') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Rekomendasi AI</a>
             <a href="{{ route('umkm.profil') }}" class="{{ $tab }} {{ request()->routeIs('umkm.profil') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Profil</a>
         </div>

@@ -16,7 +16,23 @@ class WalletController extends Controller
 
     public function saldo(Request $request)
     {
-        return response()->json(['data' => ['saldo' => (float) $this->wallet->saldo($request->user())]]);
+        $user = $request->user();
+        $saldo = (float) $this->wallet->saldo($user);
+
+        $masukBulanIni = (float) WasteDeposit::where('nasabah_id', $user->id)
+            ->whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
+            ->sum('total_nilai');
+
+        $terakhir = $this->wallet->walletFor($user)
+            ->transactions()->latest()->first()?->created_at;
+
+        return response()->json(['data' => [
+            'saldo'              => $saldo,
+            'masuk_bulan_ini'    => $masukBulanIni,
+            'transaksi_terakhir' => $terakhir?->toIso8601String(),
+            'kode_qr'            => $user->kode_qr,
+        ]]);
     }
 
     public function transaksi(Request $request)
@@ -45,6 +61,7 @@ class WalletController extends Controller
             ->through(fn ($d) => [
                 'id'          => $d->id,
                 'bank_sampah' => $d->bankSampah?->nama,
+                'alamat'      => $d->bankSampah?->alamat,
                 'total_berat' => (float) $d->total_berat,
                 'total_nilai' => (float) $d->total_nilai,
                 'tanggal'     => $d->created_at?->toIso8601String(),
@@ -63,8 +80,10 @@ class WalletController extends Controller
     {
         $data = $request->validate([
             'jumlah'      => 'required|numeric|min:10000',
-            'metode'      => 'required|string|max:50',   // mis. transfer_bank / ewallet
+            'metode'      => 'nullable|string|max:50',    // default transfer_bank
             'no_rekening' => 'required|string|max:100',
+            'nama_bank'   => 'nullable|string|max:100',
+            'atas_nama'   => 'nullable|string|max:100',
         ]);
 
         $user = $request->user();
@@ -83,8 +102,10 @@ class WalletController extends Controller
         $w = Withdrawal::create([
             'user_id'     => $user->id,
             'jumlah'      => $data['jumlah'],
-            'metode'      => $data['metode'],
+            'metode'      => $data['metode'] ?? 'transfer_bank',
             'no_rekening' => $data['no_rekening'],
+            'nama_bank'   => $data['nama_bank'] ?? null,
+            'atas_nama'   => $data['atas_nama'] ?? null,
             'status'      => 'menunggu',
         ]);
 
@@ -102,6 +123,8 @@ class WalletController extends Controller
                 'jumlah'      => (float) $w->jumlah,
                 'metode'      => $w->metode,
                 'no_rekening' => $w->no_rekening,
+                'nama_bank'   => $w->nama_bank,
+                'atas_nama'   => $w->atas_nama,
                 'status'      => $w->status,
                 'catatan'     => $w->catatan,
                 'tanggal'     => $w->created_at?->toIso8601String(),

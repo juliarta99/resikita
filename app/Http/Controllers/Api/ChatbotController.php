@@ -27,7 +27,10 @@ class ChatbotController extends Controller
             : null;
 
         $rawContext = $convo
-            ? collect($convo->messages ?? [])->map(fn ($m) => ['role' => $m['role'], 'text' => $m['text']])->all()
+            ? collect($convo->messages ?? [])
+                ->filter(fn ($m) => is_array($m) && isset($m['role'], $m['text']) && in_array($m['role'], ['user', 'model'], true) && trim((string) $m['text']) !== '')
+                ->map(fn ($m) => ['role' => $m['role'], 'text' => (string) $m['text']])
+                ->values()->all()
             : ($data['riwayat'] ?? []);
 
         $context = $this->normalizeHistory($rawContext);
@@ -70,7 +73,13 @@ class ChatbotController extends Controller
                     'messages' => array_merge($seed, [$userMsg, $botMsg]),
                 ]);
             } else {
-                $msgs = $convo->messages ?? [];
+                $msgs = $convo->messages;
+                if (is_string($msgs)) {
+                    $msgs = json_decode($msgs, true);
+                }
+                if (! is_array($msgs)) {
+                    $msgs = [];
+                }
                 $msgs[] = $userMsg;
                 $msgs[] = $botMsg;
                 $convo->messages = $msgs;

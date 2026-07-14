@@ -53,6 +53,7 @@ class AuthController extends Controller
             'is_active'      => (bool) $user->is_active,
             'roles'          => $user->getRoleNames(),
             'saldo'          => (float) $this->wallet->saldo($user),
+            'bergabung'      => $user->created_at?->toIso8601String(),
         ];
     }
 

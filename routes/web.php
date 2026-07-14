@@ -24,6 +24,7 @@ use App\Livewire\Dinas\Profil as DinasProfil;
 use App\Livewire\Eksekutif\EksekutifDashboard;
 use App\Livewire\Eksekutif\PetaSebaran as EksekutifPetaSebaran;
 use App\Livewire\Admin\PenarikanManager;
+use App\Livewire\Admin\UmkmPenarikanManager;
 use App\Livewire\BankSampah\Dashboard as BankSampahDashboard;
 use App\Livewire\BankSampah\HargaView;
 use App\Livewire\BankSampah\InfoBankSampah;
@@ -41,6 +42,7 @@ use App\Livewire\Umkm\OrderManager;
 use App\Livewire\Umkm\ProductManager;
 use App\Livewire\Umkm\Profil as UmkmProfil;
 use App\Livewire\Umkm\Rekomendasi as UmkmRekomendasi;
+use App\Livewire\Umkm\Saldo as UmkmSaldo;
 use App\Livewire\Auth\Login;
 use App\Livewire\Public\ArtikelIndex;
 use App\Livewire\Public\ArtikelShow;
@@ -126,6 +128,7 @@ Route::middleware('auth')->group(function () {
         // Sistem
         Route::get('/pengguna', UserManager::class)->name('admin.pengguna');
         Route::get('/penarikan', PenarikanManager::class)->name('admin.penarikan');
+        Route::get('/penarikan-umkm', UmkmPenarikanManager::class)->name('admin.penarikan-umkm');
         Route::get('/artikel', ArticleManager::class)->name('admin.artikel');
         Route::get('/profil', AdminProfil::class)->name('admin.profil');
     });
@@ -148,6 +151,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/produk', ProductManager::class)->name('umkm.produk');
         Route::get('/pesanan', OrderManager::class)->name('umkm.pesanan');
         Route::get('/keuangan', UmkmKeuangan::class)->name('umkm.keuangan');
+        Route::get('/saldo', UmkmSaldo::class)->name('umkm.saldo');
         Route::get('/rekomendasi', UmkmRekomendasi::class)->name('umkm.rekomendasi');
         Route::get('/profil', UmkmProfil::class)->name('umkm.profil');
     });

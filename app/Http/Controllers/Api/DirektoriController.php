@@ -16,6 +16,12 @@ use Illuminate\Http\Request;
 
 class DirektoriController extends Controller
 {
+    /** Normalisasi koordinat: null tetap null, selain itu float. Cegah null → 0.0. */
+    private function num($v): ?float
+    {
+        return ($v === null || $v === '') ? null : (float) $v;
+    }
+
     /** Tambah jarak (km) & urutkan bila query near_lat/near_lng diberikan. */
     private function withNearby(Request $request, $collection)
     {
@@ -26,7 +32,7 @@ class DirektoriController extends Controller
         }
 
         return $collection->map(function ($i) use ($lat, $lng) {
-            if ($i['lat'] && $i['lng']) {
+            if ($i['lat'] !== null && $i['lng'] !== null) {
                 $i['jarak_km'] = round($this->haversine((float) $lat, (float) $lng, (float) $i['lat'], (float) $i['lng']), 2);
             } else {
                 $i['jarak_km'] = null;
@@ -59,7 +65,7 @@ class DirektoriController extends Controller
     {
         $data = Tps::orderBy('nama')->get()->map(fn ($t) => [
             'id' => $t->id, 'nama' => $t->nama, 'alamat' => $t->alamat, 'no_hp' => $t->no_hp,
-            'lat' => $t->lat, 'lng' => $t->lng,
+            'lat' => $this->num($t->lat), 'lng' => $this->num($t->lng),
             'berbayar' => (bool) $t->is_berbayar, 'tarif' => (float) $t->tarif,
             'foto' => $t->foto ? asset('storage/' . $t->foto) : null,
         ]);
@@ -71,7 +77,7 @@ class DirektoriController extends Controller
     {
         $data = BankSampah::orderBy('nama')->get()->map(fn ($b) => [
             'id' => $b->id, 'nama' => $b->nama, 'alamat' => $b->alamat, 'no_hp' => $b->no_hp,
-            'lat' => $b->lat, 'lng' => $b->lng,
+            'lat' => $this->num($b->lat), 'lng' => $this->num($b->lng),
             'foto' => $b->foto ? asset('storage/' . $b->foto) : null,
         ]);
 
@@ -82,7 +88,7 @@ class DirektoriController extends Controller
     {
         $data = Umkm::where('status', 'aktif')->withCount('products')->orderBy('nama')->get()->map(fn ($u) => [
             'id' => $u->id, 'nama' => $u->nama, 'deskripsi' => $u->deskripsi, 'alamat' => $u->alamat,
-            'lat' => $u->lat, 'lng' => $u->lng, 'jumlah_produk' => $u->products_count,
+            'lat' => $this->num($u->lat), 'lng' => $this->num($u->lng), 'jumlah_produk' => $u->products_count,
             'foto' => $u->foto ? asset('storage/' . $u->foto) : null,
         ]);
 
@@ -98,10 +104,24 @@ class DirektoriController extends Controller
                 'gambar' => $p->images->map(fn ($im) => asset('storage/' . $im->path))->values(),
             ]);
 
+        $stat = \App\Models\Review::where('umkm_id', $umkm->id)
+            ->selectRaw('AVG(rating) as avg, COUNT(*) as cnt')->first();
+
+        $ulasan = \App\Models\Review::where('umkm_id', $umkm->id)->with('user')->latest()->take(10)->get()
+            ->map(fn ($r) => [
+                'id' => $r->id, 'nama' => $r->user?->name ?? 'Pengguna',
+                'rating' => (int) $r->rating, 'komentar' => $r->komentar,
+                'tanggal' => $r->created_at?->toIso8601String(),
+            ]);
+
         return response()->json(['data' => [
             'id' => $umkm->id, 'nama' => $umkm->nama, 'deskripsi' => $umkm->deskripsi,
-            'alamat' => $umkm->alamat, 'no_hp' => $umkm->no_hp, 'lat' => $umkm->lat, 'lng' => $umkm->lng,
+            'alamat' => $umkm->alamat, 'no_hp' => $umkm->no_hp,
+            'lat' => $this->num($umkm->lat), 'lng' => $this->num($umkm->lng),
             'foto' => $umkm->foto ? asset('storage/' . $umkm->foto) : null,
+            'rating' => round((float) ($stat->avg ?? 0), 1),
+            'jumlah_ulasan' => (int) ($stat->cnt ?? 0),
+            'ulasan' => $ulasan,
             'produk' => $produk,
         ]]);
     }
@@ -113,7 +133,7 @@ class DirektoriController extends Controller
 
         return response()->json(['data' => [
             'id' => $tps->id, 'nama' => $tps->nama, 'alamat' => $tps->alamat, 'no_hp' => $tps->no_hp,
-            'lat' => (float) $tps->lat, 'lng' => (float) $tps->lng,
+            'lat' => $this->num($tps->lat), 'lng' => $this->num($tps->lng),
             'berbayar' => (bool) $tps->is_berbayar, 'tarif' => (float) $tps->tarif,
             'jumlah_nasabah' => $nasabah,
             'foto' => $tps->foto ? asset('storage/' . $tps->foto) : null,
@@ -128,7 +148,7 @@ class DirektoriController extends Controller
 
         return response()->json(['data' => [
             'id' => $bankSampah->id, 'nama' => $bankSampah->nama, 'alamat' => $bankSampah->alamat, 'no_hp' => $bankSampah->no_hp,
-            'lat' => (float) $bankSampah->lat, 'lng' => (float) $bankSampah->lng,
+            'lat' => $this->num($bankSampah->lat), 'lng' => $this->num($bankSampah->lng),
             'jumlah_nasabah' => $nasabah,
             'foto' => $bankSampah->foto ? asset('storage/' . $bankSampah->foto) : null,
             'jarak_km' => $this->jarakDari($request, $bankSampah->lat, $bankSampah->lng),
@@ -234,20 +254,54 @@ class DirektoriController extends Controller
             ->latest()->limit(300)->get()
             ->map(fn ($r) => [
                 'id' => $r->id, 'judul' => $r->judul, 'kategori' => $r->kategori?->nama,
-                'status' => $r->status, 'lat' => (float) $r->lat, 'lng' => (float) $r->lng,
+                'status' => $r->status,
+                'lat' => $this->num($r->lat), 'lng' => $this->num($r->lng),
                 'alamat' => $r->alamat,
             ]);
 
         return response()->json(['data' => $this->withNearby($request, $data)]);
     }
 
-    public function hargaSampah()
+    public function hargaSampah(Request $request)
     {
-        $data = WastePrice::where('is_active', true)->orderBy('jenis_sampah')->get()->map(fn ($h) => [
+        $rows = WastePrice::where('is_active', true)->orderBy('jenis_sampah')->get();
+
+        $map = fn ($h) => [
             'id' => $h->id, 'jenis_sampah' => $h->jenis_sampah, 'satuan' => $h->satuan,
             'harga_per_kg' => (float) $h->harga_per_kg,
-        ]);
+            'kategori' => $this->kategoriHarga($h->jenis_sampah),
+        ];
 
-        return response()->json(['data' => $data]);
+        // ?grouped=1 -> dikelompokkan per kategori (untuk katalog Bank Sampah)
+        if ($request->boolean('grouped')) {
+            $data = $rows->map($map)->groupBy('kategori')
+                ->map(fn ($items, $kategori) => [
+                    'kategori' => $kategori,
+                    'items'    => $items->values(),
+                ])->values();
+
+            return response()->json(['data' => $data]);
+        }
+
+        return response()->json(['data' => $rows->map($map)->values()]);
+    }
+
+    /** Tebak kategori dari nama jenis sampah (waste_prices tak punya kolom kategori). */
+    private function kategoriHarga(string $jenis): string
+    {
+        $j = strtolower($jenis);
+
+        return match (true) {
+            str_contains($j, 'kertas') || str_contains($j, 'kardus') || str_contains($j, 'koran')
+                || str_contains($j, 'duplex') || str_contains($j, 'majalah') || str_contains($j, 'buku') => 'Kertas',
+            str_contains($j, 'plastik') || str_contains($j, 'pet') || str_contains($j, 'botol')
+                || str_contains($j, 'gelas') || str_contains($j, 'hdpe') || str_contains($j, 'kresek') => 'Plastik',
+            str_contains($j, 'logam') || str_contains($j, 'kaleng') || str_contains($j, 'aluminium')
+                || str_contains($j, 'besi') || str_contains($j, 'tembaga') => 'Logam',
+            str_contains($j, 'kaca') || str_contains($j, 'beling') => 'Kaca',
+            str_contains($j, 'organik') || str_contains($j, 'kompos') => 'Organik',
+            str_contains($j, 'b3') || str_contains($j, 'baterai') || str_contains($j, 'elektronik') => 'B3',
+            default => 'Lainnya',
+        };
     }
 }

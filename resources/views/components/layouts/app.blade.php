@@ -79,6 +79,7 @@
                 <div class="mt-2 space-y-1">
                     <a href="{{ route('admin.pengguna') }}" class="{{ $item }} {{ request()->routeIs('admin.pengguna') ? $active : $idle }}">Manajemen Pengguna</a>
                     <a href="{{ route('admin.penarikan') }}" class="{{ $item }} {{ request()->routeIs('admin.penarikan') ? $active : $idle }}">Penarikan Saldo</a>
+                    <a href="{{ route('admin.penarikan-umkm') }}" class="{{ $item }} {{ request()->routeIs('admin.penarikan-umkm') ? $active : $idle }}">Penarikan UMKM</a>
                     <a href="{{ route('admin.artikel') }}" class="{{ $item }} {{ request()->routeIs('admin.artikel') ? $active : $idle }}">Artikel Edukasi</a>
                     <a href="{{ route('admin.profil') }}" class="{{ $item }} {{ request()->routeIs('admin.profil') ? $active : $idle }}">Profil</a>
                 </div>

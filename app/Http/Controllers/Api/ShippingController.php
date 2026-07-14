@@ -49,9 +49,22 @@ class ShippingController extends Controller
         try {
             $hasil = $this->ongkir->cost($data['destination_id'], $berat, $data['courier'] ?? 'jne:jnt:sicepat');
         } catch (\Throwable $e) {
-            return response()->json(['message' => 'Gagal menghitung ongkir.'], 503);
+            // RajaOngkir gagal -> pakai ongkir default agar checkout tetap jalan
+            \Illuminate\Support\Facades\Log::warning('RajaOngkir gagal, pakai ongkir default: ' . $e->getMessage());
+
+            return response()->json(['data' => [
+                'berat_gram' => $berat,
+                'opsi'       => [[
+                    'courier'     => 'default',
+                    'service'     => 'Reguler',
+                    'description' => 'Ongkir standar',
+                    'cost'        => 15000,
+                    'etd'         => '3-5 hari',
+                ]],
+                'is_default' => true,
+            ]]);
         }
 
-        return response()->json(['data' => ['berat_gram' => $berat, 'opsi' => $hasil]]);
+        return response()->json(['data' => ['berat_gram' => $berat, 'opsi' => $hasil, 'is_default' => false]]);
     }
 }

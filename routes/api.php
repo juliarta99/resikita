@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\DirektoriController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PetugasController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ShippingController;
@@ -30,6 +31,7 @@ Route::prefix('v1')->group(function () {
     // ---------- Browse publik (guest boleh lihat, tidak boleh aksi) ----------
     Route::get('artikel', [ArticleController::class, 'index']);
     Route::get('artikel/{slug}', [ArticleController::class, 'show']);
+    Route::get('kategori-produk', [ProductController::class, 'kategori']);
     Route::get('produk', [ProductController::class, 'index']);
     Route::get('produk/{product}', [ProductController::class, 'show']);
     Route::get('direktori/tps', [DirektoriController::class, 'tps']);
@@ -40,6 +42,7 @@ Route::prefix('v1')->group(function () {
     Route::get('direktori/umkm/{umkm}', [DirektoriController::class, 'umkmDetail']);
     Route::get('harga-sampah', [DirektoriController::class, 'hargaSampah']);
     Route::get('peta/laporan', [DirektoriController::class, 'petaLaporan']);
+    Route::get('laporan/{report}', [ReportController::class, 'show'])->where('report', '[0-9]+'); // publik
 
     // ---------- Perlu token (masyarakat) ----------
     Route::middleware('auth:sanctum')->group(function () {
@@ -70,12 +73,12 @@ Route::prefix('v1')->group(function () {
         Route::post('pesanan', [OrderController::class, 'store']);
         Route::get('pesanan/{order}', [OrderController::class, 'show']);
         Route::post('pesanan/{order}/batal', [OrderController::class, 'cancel']);
+        Route::post('pesanan/{order}/ulasan', [ReviewController::class, 'store']);
 
         // Laporan
         Route::get('laporan/kategori', [ReportController::class, 'kategori']);
         Route::get('laporan', [ReportController::class, 'index']);
         Route::post('laporan', [ReportController::class, 'store']);
-        Route::get('laporan/{report}', [ReportController::class, 'show']);
 
         // AI
         Route::post('klasifikasi', [ClassificationController::class, 'store']);

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\TpsSubscription;
+use App\Services\Domain\UmkmWalletService;
 use App\Services\Domain\WalletService;
 use App\Services\Integration\MidtransService;
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
-    public function __construct(private WalletService $wallet)
+    public function __construct(private WalletService $wallet, private UmkmWalletService $umkmWallet)
     {
     }
 
@@ -92,6 +93,8 @@ class OrderController extends Controller
 
                 if ($data['metode_bayar'] === 'saldo') {
                     $this->wallet->debit($user, $total + $ongkir, 'belanja', $order, 'Belanja pesanan #' . $order->id);
+                    // Bayar saldo -> langsung masuk ke saldo UMKM (nilai produk, ongkir tidak termasuk)
+                    $this->umkmWallet->credit($umkmId, $total, 'penjualan', $order, 'Penjualan pesanan #' . $order->id);
                 }
 
                 return $order;
@@ -165,6 +168,7 @@ class OrderController extends Controller
         }
         if ($status === 'paid') {
             $order->update(['status' => 'dibayar']);
+            $this->kreditUmkm($order); // Midtrans sukses -> saldo UMKM bertambah
         } elseif ($status === 'failed') {
             DB::transaction(function () use ($order) {
                 $order->load('items');
@@ -204,6 +208,7 @@ class OrderController extends Controller
             'id' => $o->id, 'umkm' => $o->umkm?->nama, 'total' => (float) $o->total,
             'ongkir' => (float) $o->ongkir, 'status' => $o->status, 'jumlah_item' => $o->items_count,
             'no_resi' => $o->no_resi, 'kurir' => $o->kurir,
+            'sudah_ulasan' => \App\Models\Review::where('order_id', $o->id)->exists(),
             'tanggal' => $o->created_at?->toIso8601String(),
         ]);
 
@@ -236,21 +241,45 @@ class OrderController extends Controller
             if ($order->metode_bayar === 'saldo' && $order->status === 'dibayar') {
                 $this->wallet->credit($request->user(), (float) $order->total + (float) $order->ongkir, 'refund', $order, 'Refund pesanan #' . $order->id);
             }
+            // Balikkan saldo UMKM bila sebelumnya sudah dikredit
+            if ($order->umkm_id && \App\Models\UmkmWalletTransaction::where('reference_type', $order->getMorphClass())->where('reference_id', $order->id)->where('tipe', 'penjualan')->exists()) {
+                try {
+                    $this->umkmWallet->debit($order->umkm_id, (float) $order->total, 'refund', $order, 'Pembatalan pesanan #' . $order->id);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Reversal saldo UMKM gagal: ' . $e->getMessage(), ['order_id' => $order->id]);
+                }
+            }
             $order->update(['status' => 'dibatalkan']);
         });
 
         return response()->json(['message' => 'Pesanan dibatalkan.']);
     }
 
+    /** Kredit saldo UMKM sekali per pesanan (guard anti-dobel). */
+    private function kreditUmkm(Order $order): void
+    {
+        if (! $order->umkm_id) {
+            return;
+        }
+        $sudah = \App\Models\UmkmWalletTransaction::where('reference_type', $order->getMorphClass())
+            ->where('reference_id', $order->id)->where('tipe', 'penjualan')->exists();
+        if ($sudah) {
+            return;
+        }
+        $this->umkmWallet->credit($order->umkm_id, (float) $order->total, 'penjualan', $order, 'Penjualan pesanan #' . $order->id);
+    }
+
     private function orderPayload(Order $order): array
     {
         return [
-            'id' => $order->id, 'umkm' => $order->umkm?->nama, 'total' => (float) $order->total,
+            'id' => $order->id, 'umkm' => $order->umkm?->nama, 'umkm_id' => $order->umkm_id, 'total' => (float) $order->total,
             'ongkir' => (float) $order->ongkir, 'grand_total' => (float) $order->total + (float) $order->ongkir,
             'metode_bayar' => $order->metode_bayar, 'status' => $order->status,
             'alamat_kirim' => $order->alamat_kirim, 'kurir' => $order->kurir, 'no_resi' => $order->no_resi,
+            'sudah_ulasan' => \App\Models\Review::where('order_id', $order->id)->exists(),
             'tanggal' => $order->created_at?->toIso8601String(),
             'items' => $order->items->map(fn ($i) => [
+                'product_id' => $i->product_id,
                 'nama' => $i->nama_snapshot, 'harga' => (float) $i->harga_snapshot,
                 'qty' => $i->qty, 'subtotal' => (float) $i->subtotal,
             ])->values(),

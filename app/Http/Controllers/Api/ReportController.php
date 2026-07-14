@@ -66,7 +66,7 @@ class ReportController extends Controller
 
         return response()->json([
             'message' => 'Laporan berhasil dikirim.',
-            'data'    => $this->reportPayload($report->fresh('images', 'kategori')),
+            'data'    => $this->reportPayload($report->fresh('images', 'kategori'), false, $request->user()),
         ], 201);
     }
 
@@ -90,14 +90,16 @@ class ReportController extends Controller
 
     public function show(Request $request, Report $report)
     {
-        abort_unless($report->pelapor_id === $request->user()->id, 403);
+        // Publik: laporan bisa dilihat siapa saja (dengan atau tanpa login)
         $report->load('kategori', 'images', 'progress');
 
-        return response()->json(['data' => $this->reportPayload($report, true)]);
+        return response()->json(['data' => $this->reportPayload($report, true, $request->user())]);
     }
 
-    private function reportPayload(Report $report, bool $lengkap = false): array
+    private function reportPayload(Report $report, bool $lengkap = false, $user = null): array
     {
+        $userId = optional($user)->id;
+
         $data = [
             'id' => $report->id, 'tiket_no' => $report->tiket_no, 'judul' => $report->judul,
             'deskripsi' => $report->deskripsi, 'kategori' => $report->kategori?->nama,
@@ -108,6 +110,8 @@ class ReportController extends Controller
                 ? $report->images->map(fn ($im) => asset('storage/' . $im->path))->values()
                 : [],
             'tanggal' => $report->created_at?->toIso8601String(),
+            'is_owner' => $userId !== null && $report->pelapor_id === $userId,
+            'can_delete' => $userId !== null && $report->pelapor_id === $userId && $report->status === 'menunggu',
         ];
 
         if ($lengkap && $report->relationLoaded('progress')) {
