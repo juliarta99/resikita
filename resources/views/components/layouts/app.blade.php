@@ -14,6 +14,7 @@
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @stack('styles')
 </head>
 <body class="h-full bg-[#f5f6f8] text-primary-900 antialiased">
 <div x-data="{ open: false }" class="min-h-full">
@@ -25,11 +26,7 @@
 
         <div class="flex h-16 flex-none items-center gap-2.5 px-6">
             <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
-                    <path d="M2 21c0-3 1.85-5.36 5.08-6"/>
-                </svg>
+                <img src="{{ asset('images/logo.png') }}" class="w-6" alt="Niti Resik">
             </div>
             <span class="text-lg font-semibold tracking-tight">Niti Resik</span>
         </div>
@@ -139,5 +136,6 @@
         </main>
     </div>
 </div>
+@stack('scripts')
 </body>
 </html>

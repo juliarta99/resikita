@@ -130,6 +130,7 @@ class OrderController extends Controller
                     ],
                     $items,
                 );
+                $order->update(['snap_token' => $snapToken]);
                 $payload['snap_token'] = $snapToken;
             } catch (\Throwable $e) {
                 return response()->json(['message' => 'Gagal membuat pembayaran Midtrans. Coba lagi.'], 503);
@@ -255,6 +256,50 @@ class OrderController extends Controller
         return response()->json(['message' => 'Pesanan dibatalkan.']);
     }
 
+    /** Buat ulang Snap token untuk pesanan Midtrans yang masih menunggu pembayaran. */
+    public function bayarUlang(Request $request, Order $order, MidtransService $midtrans)
+    {
+        abort_unless($order->user_id === $request->user()->id, 403);
+
+        if ($order->metode_bayar !== 'midtrans' || $order->status !== 'menunggu_bayar') {
+            return response()->json(['message' => 'Pesanan ini tidak dapat dibayar ulang.'], 422);
+        }
+
+        $order->load('items');
+        $user = $request->user();
+        $ongkir = (float) $order->ongkir;
+
+        $items = $order->items->map(fn ($i) => [
+            'id'       => (string) $i->product_id,
+            'price'    => (int) round($i->harga_snapshot),
+            'quantity' => $i->qty,
+            'name'     => mb_substr($i->nama_snapshot, 0, 50),
+        ])->values()->all();
+
+        if ($ongkir > 0) {
+            $items[] = ['id' => 'ONGKIR', 'price' => (int) round($ongkir), 'quantity' => 1, 'name' => 'Ongkos Kirim'];
+        }
+
+        try {
+            $snapToken = $midtrans->createSnapToken(
+                'ORDER-' . $order->id . '-' . now()->timestamp,
+                (int) round((float) $order->total + $ongkir),
+                [
+                    'first_name' => $user->name,
+                    'email'      => $user->email ?: ('user' . $user->id . '@nitiresik.id'),
+                    'phone'      => $user->phone,
+                ],
+                $items,
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Gagal membuat pembayaran. Coba lagi.'], 503);
+        }
+
+        $order->update(['snap_token' => $snapToken]);
+
+        return response()->json(['data' => ['snap_token' => $snapToken]]);
+    }
+
     /** Kredit saldo UMKM sekali per pesanan (guard anti-dobel). */
     private function kreditUmkm(Order $order): void
     {
@@ -276,6 +321,8 @@ class OrderController extends Controller
             'ongkir' => (float) $order->ongkir, 'grand_total' => (float) $order->total + (float) $order->ongkir,
             'metode_bayar' => $order->metode_bayar, 'status' => $order->status,
             'alamat_kirim' => $order->alamat_kirim, 'kurir' => $order->kurir, 'no_resi' => $order->no_resi,
+            'snap_token' => ($order->status === 'menunggu_bayar' && $order->metode_bayar === 'midtrans')
+                ? $order->snap_token : null,   // ← TAMBAH
             'sudah_ulasan' => \App\Models\Review::where('order_id', $order->id)->exists(),
             'tanggal' => $order->created_at?->toIso8601String(),
             'items' => $order->items->map(fn ($i) => [

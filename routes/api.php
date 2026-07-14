@@ -74,6 +74,7 @@ Route::prefix('v1')->group(function () {
         Route::get('pesanan/{order}', [OrderController::class, 'show']);
         Route::post('pesanan/{order}/batal', [OrderController::class, 'cancel']);
         Route::post('pesanan/{order}/ulasan', [ReviewController::class, 'store']);
+        Route::post('pesanan/{order}/bayar-ulang', [OrderController::class, 'bayarUlang']);
 
         // Laporan
         Route::get('laporan/kategori', [ReportController::class, 'kategori']);

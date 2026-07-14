@@ -1,15 +1,11 @@
 <div class="min-h-screen flex items-center justify-center bg-primary-50 px-4">
     <div class="w-full max-w-sm">
         <div class="mb-8 text-center">
-            <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
-                    <path d="M2 21c0-3 1.85-5.36 5.08-6"/>
-                </svg>
+            <div class="mx-auto mb-3 flex w-18 h-18 p-3 items-center justify-center rounded-xl bg-primary-500">
+                <img src="{{ asset('images/logo.png') }}" class="w-16" alt="Niti Resik">
             </div>
             <h1 class="text-2xl font-bold text-primary-900">Niti Resik</h1>
-            <p class="text-sm text-primary-500">Panel Pengelolaan Sampah Terpadu</p>
+            <p class="text-sm text-primary-500">Bersama Wujudkan Bumi Bersih</p>
         </div>
 
         <div class="rounded-2xl border border-primary-100 bg-white p-6 shadow-sm">
@@ -39,6 +35,12 @@
                     <span wire:loading.remove wire:target="login">Masuk</span>
                     <span wire:loading wire:target="login">Memproses...</span>
                 </button>
+                <div class="w-full">
+                    <a href="/"
+                        class="block w-full text-center rounded-lg bg-white py-2.5 font-medium border border-gray-200 text-gray-500 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                        Kembali ke Beranda
+                    </a>
+                </div>
             </form>
         </div>
 

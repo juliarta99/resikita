@@ -21,15 +21,15 @@
     {{-- Filter --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         <input type="text" wire:model.live.debounce.400ms="search" placeholder="Cari judul..."
-            class="rounded-lg border-slate-300 focus:border-emerald-500 focus:ring-emerald-500">
-        <select wire:model.live="filterTipe" class="rounded-lg border-slate-300 focus:border-emerald-500 focus:ring-emerald-500">
+            class="rounded-lg border border-slate-300 py-2 px-4 focus:border-emerald-500 focus:ring-emerald-500">
+        <select wire:model.live="filterTipe" class="rounded-lg border border-slate-300 py-2 px-4 focus:border-emerald-500 focus:ring-emerald-500">
             <option value="">Semua Tipe</option>
             <option value="artikel">Artikel</option>
             <option value="panduan">Panduan</option>
             <option value="tutorial">Tutorial</option>
             <option value="jurnal">Jurnal</option>
         </select>
-        <select wire:model.live="filterStatus" class="rounded-lg border-slate-300 focus:border-emerald-500 focus:ring-emerald-500">
+        <select wire:model.live="filterStatus" class="rounded-lg border border-slate-300 py-2 px-4 focus:border-emerald-500 focus:ring-emerald-500">
             <option value="">Semua Status</option>
             <option value="published">Published</option>
             <option value="draft">Draft</option>
@@ -122,12 +122,14 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Judul <span class="text-red-500">*</span></label>
-                        <input type="text" wire:model.blur="judul" class="w-full rounded-lg border-slate-300 focus:border-emerald-500 focus:ring-emerald-500">
+                        <input type="text" wire:model.blur="judul"
+                            class="w-full rounded-lg border border-slate-300 py-2 px-4 focus:border-emerald-500 focus:ring-emerald-500">
                         @error('judul') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Slug <span class="text-red-500">*</span></label>
-                        <input type="text" wire:model="slug" class="w-full rounded-lg border-slate-300 focus:border-emerald-500 focus:ring-emerald-500">
+                        <input type="text" wire:model="slug"
+                            class="w-full rounded-lg border border-slate-300 py-2 px-4 focus:border-emerald-500 focus:ring-emerald-500">
                         @error('slug') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                 </div>
@@ -136,7 +138,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Tipe</label>
-                        <select wire:model="tipe" class="w-full rounded-lg border-slate-300 focus:border-emerald-500 focus:ring-emerald-500">
+                        <select wire:model="tipe"
+                            class="w-full rounded-lg border border-slate-300 py-2 px-4 focus:border-emerald-500 focus:ring-emerald-500">
                             <option value="artikel">Artikel</option>
                             <option value="panduan">Panduan</option>
                             <option value="tutorial">Tutorial</option>
@@ -145,14 +148,16 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                        <select wire:model="status" class="w-full rounded-lg border-slate-300 focus:border-emerald-500 focus:ring-emerald-500">
+                        <select wire:model="status"
+                            class="w-full rounded-lg border border-slate-300 py-2 px-4 focus:border-emerald-500 focus:ring-emerald-500">
                             <option value="draft">Draft</option>
                             <option value="published">Published</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Tanggal Terbit</label>
-                        <input type="date" wire:model="published_at" class="w-full rounded-lg border-slate-300 focus:border-emerald-500 focus:ring-emerald-500">
+                        <input type="date" wire:model="published_at"
+                            class="w-full rounded-lg border border-slate-300 py-2 px-4 focus:border-emerald-500 focus:ring-emerald-500">
                     </div>
                 </div>
 
@@ -160,11 +165,13 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">URL Video (opsional, mis. YouTube)</label>
-                        <input type="url" wire:model="video_url" placeholder="https://youtu.be/..." class="w-full rounded-lg border-slate-300 focus:border-emerald-500 focus:ring-emerald-500">
+                        <input type="url" wire:model="video_url" placeholder="https://youtu.be/..."
+                            class="w-full rounded-lg border border-slate-300 py-2 px-4 focus:border-emerald-500 focus:ring-emerald-500">
                         @error('video_url') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <label class="inline-flex items-center gap-2 py-2.5">
-                        <input type="checkbox" wire:model="is_unggulan" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                        <input type="checkbox" wire:model="is_unggulan"
+                            class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                         <span class="text-sm text-slate-700">Tandai sebagai <b>Konten Unggulan</b></span>
                     </label>
                 </div>
@@ -173,7 +180,7 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Thumbnail</label>
                     <div class="flex items-center gap-4">
-                        <div class="w-20 h-20 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center">
+                        <div class="w-20 h-20 rounded-lg border border-slate-200 bg-slate-100 overflow-hidden flex items-center justify-center">
                             @if ($thumbnail)
                                 <img src="{{ $thumbnail->temporaryUrl() }}" class="w-full h-full object-cover">
                             @elseif ($existingThumbnail)
@@ -182,7 +189,8 @@
                                 <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4-4 4 4 4-6 4 6M4 6h16v12H4z"/></svg>
                             @endif
                         </div>
-                        <input type="file" wire:model="thumbnail" accept="image/*" class="text-sm">
+                        <input type="file" wire:model="thumbnail" accept="image/*"
+                            class="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-emerald-700 hover:file:bg-emerald-100">
                     </div>
                     <div wire:loading wire:target="thumbnail" class="text-xs text-slate-400 mt-1">Mengunggah…</div>
                     @error('thumbnail') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
@@ -191,15 +199,16 @@
                 {{-- Konten (WYSIWYG -> HTML) --}}
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Konten <span class="text-red-500">*</span></label>
-                    <div wire:ignore x-data="articleEditor(@js($konten))" x-init="init()">
+                    <div wire:ignore x-data="articleEditor(@js($konten))" x-init="init()"
+                         class="rounded-lg border border-slate-300 py-2 px-4 overflow-hidden">
                         <div x-ref="editor" style="min-height:240px" class="bg-white"></div>
                     </div>
                     @error('konten') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    <p class="text-xs text-slate-400 mt-1">Konten tersimpan sebagai HTML dan tampil sesuai di aplikasi. Tautan YouTube di dalam konten otomatis di-embed di aplikasi.</p>
+                    <p class="text-xs text-slate-400 mt-1">Gunakan tombol <b>video</b> di toolbar untuk menyematkan YouTube, atau tempel tautannya langsung di konten.</p>
                 </div>
 
-                <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
-                    <button type="button" @click="open = false" class="px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-medium">Batal</button>
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" @click="open = false" class="px-4 py-2.5 rounded-lg border border-slate-300 py-2 px-4 text-slate-700 font-medium hover:bg-slate-50">Batal</button>
                     <button type="submit" class="px-5 py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold">
                         <span wire:loading.remove wire:target="save">Simpan</span>
                         <span wire:loading wire:target="save">Menyimpan…</span>
@@ -209,12 +218,16 @@
         </div>
     </div>
 
-    {{-- Quill (WYSIWYG) --}}
+    {{-- Quill (WYSIWYG) — Quill sudah dimuat di layout --}}
     @push('styles')
-        <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+        <style>
+            .ql-toolbar.ql-snow{border-color:#cbd5e1;border-top-left-radius:.5rem;border-top-right-radius:.5rem;background:#f8fafc}
+            .ql-container.ql-snow{border-color:#cbd5e1;border-bottom-left-radius:.5rem;border-bottom-right-radius:.5rem}
+            .ql-editor{min-height:240px;font-size:14px}
+            .ql-editor iframe{width:100%;aspect-ratio:16/9;border-radius:.5rem}
+        </style>
     @endpush
     @push('scripts')
-        <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
         <script>
             function articleEditor(initial) {
                 return {
@@ -226,9 +239,10 @@
                             modules: {
                                 toolbar: [
                                     [{ header: [2, 3, false] }],
-                                    ['bold', 'italic', 'underline'],
+                                    ['bold', 'italic', 'underline', 'strike'],
                                     [{ list: 'ordered' }, { list: 'bullet' }],
-                                    ['link', 'blockquote'],
+                                    ['blockquote', 'code-block'],
+                                    ['link', 'video'],
                                     ['clean'],
                                 ],
                             },

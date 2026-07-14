@@ -44,6 +44,11 @@ use App\Livewire\Umkm\Profil as UmkmProfil;
 use App\Livewire\Umkm\Rekomendasi as UmkmRekomendasi;
 use App\Livewire\Umkm\Saldo as UmkmSaldo;
 use App\Livewire\Auth\Login;
+use App\Livewire\PetugasLapangan\PetaSebaran;
+use App\Livewire\PetugasLapangan\PetugasDashboard;
+use App\Livewire\PetugasLapangan\Profil as PetugasLapanganProfil;
+use App\Livewire\PetugasLapangan\TugasDetail;
+use App\Livewire\PetugasLapangan\TugasSaya;
 use App\Livewire\Public\ArtikelIndex;
 use App\Livewire\Public\ArtikelShow;
 use App\Livewire\Public\BankSampahIndex;
@@ -175,5 +180,13 @@ Route::middleware('auth')->group(function () {
             Route::get('/petugas', PetugasManager::class)->name('bank-sampah.petugas');
             Route::get('/info', InfoBankSampah::class)->name('bank-sampah.info');
         });
+    });
+
+    Route::middleware('role:petugas_lapangan')->prefix('petugas')->group(function () {
+        Route::get('/', PetugasDashboard::class)->name('petugas.dashboard');
+        Route::get('/tugas', TugasSaya::class)->name('petugas.tugas');
+        Route::get('/tugas/{report}', TugasDetail::class)->name('petugas.tugas.detail');
+        Route::get('/peta', PetaSebaran::class)->name('petugas.peta');
+        Route::get('/profil', PetugasLapanganProfil::class)->name('petugas.profil');
     });
 });

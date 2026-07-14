@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Order extends Model
 {
-    protected $fillable = ['user_id', 'umkm_id', 'total', 'ongkir', 'metode_bayar', 'status', 'alamat_kirim', 'destination_id', 'kurir', 'no_resi'];
+    protected $fillable = ['user_id', 'umkm_id', 'total', 'ongkir', 'metode_bayar', 'status', 'alamat_kirim', 'destination_id', 'kurir', 'no_resi', 'snap_token'];
 
     public function user(): BelongsTo
     {

@@ -30,6 +30,7 @@ class Login extends Component
             ]);
         }
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
         if (! $user->is_active) {
@@ -39,8 +40,8 @@ class Login extends Component
             ]);
         }
 
-        // Masyarakat & petugas lapangan hanya lewat aplikasi mobile
-        if ($user->hasAnyRole(['masyarakat', 'petugas_lapangan'])) {
+        // Masyarakat hanya lewat aplikasi mobile
+        if ($user->hasAnyRole(['masyarakat'])) {
             Auth::logout();
             throw ValidationException::withMessages([
                 'email' => 'Akun ini hanya dapat digunakan lewat aplikasi mobile.',
