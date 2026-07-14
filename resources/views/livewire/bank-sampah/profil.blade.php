@@ -3,12 +3,10 @@
         <h1 class="text-2xl font-semibold text-primary-900">Profil</h1>
         <p class="mt-1 text-sm text-gray-500">Perbarui data akun Anda.</p>
     </div>
-
     @if (session('ok'))
         <div class="rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700">{{ session('ok') }}</div>
     @endif
-
-    <form wire:submit="simpan" class="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <form wire:submit="simpan" class="space-y-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
         <div>
             <label class="block text-sm font-medium text-primary-900">Nama</label>
             <input wire:model="name" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
@@ -29,8 +27,8 @@
             <input type="password" wire:model="password" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
             @error('password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
         </div>
-        <div class="flex justify-end">
-            <button type="submit" class="rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700">Simpan</button>
+        <div class="pt-1">
+            <button type="submit" class="w-full rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 sm:w-auto sm:float-right">Simpan</button>
         </div>
     </form>
 </div>

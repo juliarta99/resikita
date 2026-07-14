@@ -6,7 +6,7 @@
     </div>
 
     {{-- Kartu ringkasan --}}
-    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         @php
             $cards = [
                 ['label' => 'Tugas Aktif', 'value' => $aktif, 'sub' => 'Ditugaskan / dikerjakan', 'ring' => 'bg-amber-50 text-amber-700'],
@@ -18,31 +18,30 @@
         @foreach ($cards as $c)
             <div class="rounded-xl border border-slate-200 bg-white p-4">
                 <p class="text-sm text-slate-500">{{ $c['label'] }}</p>
-                <p class="mt-1 text-2xl font-bold text-slate-800">{{ number_format($c['value']) }}</p>
+                <p class="mt-1 text-xl font-bold text-slate-800 sm:text-2xl">{{ number_format($c['value']) }}</p>
                 <span class="mt-2 inline-block rounded-md px-2 py-0.5 text-xs font-semibold {{ $c['ring'] }}">{{ $c['sub'] }}</span>
             </div>
         @endforeach
     </div>
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
+    <div class="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-5">
         {{-- Tren 7 hari --}}
-        <div class="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-2">
-            <h2 class="mb-3 text-base font-bold text-slate-800">Aktivitas 7 Hari Terakhir</h2>
+        <div class="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 lg:col-span-2">
+            <h2 class="mb-1 text-base font-bold text-slate-800">Aktivitas 7 Hari Terakhir</h2>
             <p class="mb-3 text-xs text-slate-400">Jumlah update progress per hari.</p>
-            <div wire:ignore
+            <div wire:ignore class="h-48 sm:h-52"
                  x-data="petugasTren(@js($trenLabels), @js($trenData))"
                  x-init="init()">
-                <canvas x-ref="canvas" height="180"></canvas>
+                <canvas x-ref="canvas"></canvas>
             </div>
         </div>
 
         {{-- Tugas terbaru --}}
-        <div class="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-3">
+        <div class="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 lg:col-span-3">
             <div class="mb-3 flex items-center justify-between">
                 <h2 class="text-base font-bold text-slate-800">Tugas Terbaru</h2>
                 <a href="{{ route('petugas.tugas') }}" class="text-sm font-semibold text-emerald-700 hover:text-emerald-800">Lihat semua</a>
             </div>
-
             @forelse ($recent as $a)
                 <a href="{{ route('petugas.tugas.detail', $a->report_id) }}"
                    class="flex items-center gap-3 border-t border-slate-100 py-3 first:border-t-0 hover:bg-slate-50">
@@ -88,6 +87,7 @@
                             },
                             options: {
                                 responsive: true,
+                                maintainAspectRatio: false,
                                 plugins: { legend: { display: false } },
                                 scales: {
                                     y: { beginAtZero: true, ticks: { precision: 0 } },

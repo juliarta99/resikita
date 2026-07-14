@@ -7,7 +7,7 @@
 
     {{-- Filter --}}
     <div class="rounded-xl border border-slate-200 bg-white p-4">
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             <div>
                 <label class="mb-1 block text-xs font-medium text-slate-500">Status Tugas</label>
                 <select wire:model.live="filterStatus"
@@ -29,15 +29,18 @@
                     @endforeach
                 </select>
             </div>
-            <div>
-                <label class="mb-1 block text-xs font-medium text-slate-500">Dari Tanggal</label>
-                <input type="date" wire:model.live="dariTanggal"
-                    class="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-            </div>
-            <div>
-                <label class="mb-1 block text-xs font-medium text-slate-500">Sampai Tanggal</label>
-                <input type="date" wire:model.live="sampaiTanggal"
-                    class="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+            {{-- Tanggal: berdampingan sejak HP --}}
+            <div class="grid grid-cols-2 gap-3 sm:col-span-2 sm:grid-cols-2 md:col-span-2 md:contents">
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-slate-500">Dari Tanggal</label>
+                    <input type="date" wire:model.live="dariTanggal"
+                        class="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-slate-500">Sampai Tanggal</label>
+                    <input type="date" wire:model.live="sampaiTanggal"
+                        class="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                </div>
             </div>
         </div>
         <div class="mt-3 flex items-center justify-between">
@@ -51,7 +54,8 @@
         <div wire:ignore
              x-data="{ markers: @entangle('markers'), ...petugasPeta() }"
              x-init="init()">
-            <div x-ref="map" style="height: 520px; width: 100%;"></div>
+            {{-- Tinggi adaptif: lebih pendek di HP, lega di desktop --}}
+            <div x-ref="map" class="h-[24rem] w-full sm:h-[32rem]"></div>
         </div>
     </div>
 
@@ -107,7 +111,6 @@
                         this.layer = L.layerGroup().addTo(this.map);
                         this.render();
                         setTimeout(() => this.map.invalidateSize(), 200);
-
                         // Re-render marker saat data berubah dari filter Livewire
                         this.$watch('markers', () => this.render());
                     },

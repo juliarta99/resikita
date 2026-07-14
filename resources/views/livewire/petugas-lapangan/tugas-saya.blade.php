@@ -14,7 +14,7 @@
 
     {{-- Filter --}}
     <div class="rounded-xl border border-slate-200 bg-white p-4">
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             <div class="md:col-span-1">
                 <label class="mb-1 block text-xs font-medium text-slate-500">Cari</label>
                 <input type="text" wire:model.live.debounce.400ms="search" placeholder="Judul / alamat / tiket…"
@@ -31,15 +31,18 @@
                     <option value="dibatalkan">Dibatalkan</option>
                 </select>
             </div>
-            <div>
-                <label class="mb-1 block text-xs font-medium text-slate-500">Dari Tanggal</label>
-                <input type="date" wire:model.live="dariTanggal"
-                    class="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-            </div>
-            <div>
-                <label class="mb-1 block text-xs font-medium text-slate-500">Sampai Tanggal</label>
-                <input type="date" wire:model.live="sampaiTanggal"
-                    class="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+            {{-- Tanggal: berdampingan sejak HP --}}
+            <div class="grid grid-cols-2 gap-3 sm:col-span-2 md:contents">
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-slate-500">Dari Tanggal</label>
+                    <input type="date" wire:model.live="dariTanggal"
+                        class="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-slate-500">Sampai Tanggal</label>
+                    <input type="date" wire:model.live="sampaiTanggal"
+                        class="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                </div>
             </div>
         </div>
         <div class="mt-3 flex items-center justify-between">
@@ -108,7 +111,6 @@
                     </div>
                     <span class="shrink-0 rounded-md px-2 py-1 text-xs font-semibold capitalize {{ $badgeClass($a->status) }}">{{ $a->status }}</span>
                 </div>
-
                 <div class="mt-3 space-y-1.5 text-sm">
                     <div class="flex items-center gap-2 text-slate-600">
                         <svg class="h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"/></svg>
@@ -123,7 +125,6 @@
                         <span>{{ optional($a->assigned_at)->format('d M Y H:i') ?? '-' }}</span>
                     </div>
                 </div>
-
                 <div class="mt-3 flex items-center justify-end text-sm font-semibold text-emerald-700">
                     Lihat Detail
                     <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>

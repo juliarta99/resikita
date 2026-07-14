@@ -1,12 +1,39 @@
 <div>
-    <section class="border-b border-gray-100 bg-primary-50/40">
-        <div class="mx-auto max-w-6xl px-4 py-12">
-            <h1 class="text-3xl font-bold text-primary-900">Direktori UMKM</h1>
+    <section class="relative overflow-hidden border-b border-gray-100 bg-primary-50/40">
+        {{-- Pattern titik halus --}}
+        <div class="pointer-events-none absolute inset-0"
+             style="opacity:.6;background-image:radial-gradient(#057d5d1a 1.2px, transparent 1.2px);background-size:22px 22px;"></div>
+
+        {{-- Dekorasi beranimasi (desktop only) --}}
+        <style>
+            @keyframes nr-float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-16px) } }
+            @keyframes nr-drift { 0%,100% { transform: translate(0,0) rotate(0deg) } 50% { transform: translate(10px,-14px) rotate(8deg) } }
+            @keyframes nr-pulse { 0%,100% { transform: scale(1); opacity:.4 } 50% { transform: scale(1.14); opacity:.6 } }
+            @keyframes nr-spin  { from { transform: rotate(0) } to { transform: rotate(360deg) } }
+            .nr-float { animation: nr-float 7s ease-in-out infinite }
+            .nr-drift { animation: nr-drift 9s ease-in-out infinite }
+            .nr-pulse { animation: nr-pulse 6s ease-in-out infinite }
+            .nr-spin  { animation: nr-spin 30s linear infinite }
+            @media (prefers-reduced-motion: reduce) { .nr-float,.nr-drift,.nr-pulse,.nr-spin { animation: none } }
+        </style>
+
+        {{-- Blob & bentuk primary di kanan header --}}
+        <div class="pointer-events-none absolute -right-16 -top-16 hidden h-64 w-64 rounded-full bg-primary-500/15 blur-3xl nr-pulse lg:block"></div>
+        <div class="pointer-events-none absolute right-[12%] top-[24%] hidden h-16 w-16 rounded-2xl bg-primary-500/15 nr-drift lg:block"></div>
+
+        {{-- Ikon toko UMKM melayang --}}
+        <div class="pointer-events-none absolute right-[6%] bottom-[10%] hidden text-primary-500/25 nr-float lg:block" style="animation-delay:1s">
+            <svg class="h-24 w-24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9zM3 9a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 4 0 2.5 2.5 0 0 0 4 0 2.5 2.5 0 0 0 5 0M9 20v-5h6v5"/></svg>
+        </div>
+
+        <div class="relative z-10 mx-auto max-w-7xl px-4 py-12">
+            <h1 class="mt-4 text-3xl font-bold text-primary-900">Direktori UMKM</h1>
             <p class="mt-2 max-w-2xl text-gray-600">Produk kreatif dari bahan daur ulang oleh pelaku usaha di Kabupaten Badung.</p>
             <input wire:model.live.debounce.300ms="search" placeholder="Cari UMKM…" class="mt-6 w-full max-w-sm rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
         </div>
     </section>
-    <section class="mx-auto max-w-6xl px-4 py-10">
+
+    <section class="mx-auto max-w-7xl px-4 py-10">
         @if ($umkms->isEmpty())
             <div class="rounded-xl border border-dashed border-gray-300 py-16 text-center text-gray-400">UMKM tidak ditemukan.</div>
         @else

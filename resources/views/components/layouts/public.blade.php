@@ -37,24 +37,29 @@
         ['Laporan', route('publik.laporan.index'), request()->routeIs('publik.laporan.*')],
         ['Edukasi', route('artikel.index'), request()->routeIs('artikel.*')],
     ];
-@endphp
 
-<div class="min-h-full" x-data="{ open: false }">
-    <header class="sticky top-0 z-40 border-b border-gray-200 bg-white/85 backdrop-blur">
+    // Di beranda: navbar transparan menimpa hero. Halaman lain: navbar solid + beri jarak atas.
+    $isBeranda = request()->routeIs('beranda');
+@endphp
+<div class="min-h-full" x-data="{ open: false, scrolled: false }"
+     x-init="scrolled = window.scrollY > 10;
+             window.addEventListener('scroll', () => { scrolled = window.scrollY > 10 }, { passive: true });">
+
+    <header
+        class="fixed inset-x-0 top-0 z-9999 transition-all duration-300"
+        :class="(scrolled || open || {{ $isBeranda ? 'false' : 'true' }})
+            ? 'border-b border-gray-200 bg-white/90 backdrop-blur'
+            : 'border-b border-transparent bg-transparent'">
         <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
             <a href="{{ route('beranda') }}" class="flex items-center gap-2.5">
-                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500 text-white">
-                    <img src="{{ asset('images/logo.png') }}" class="w-6" alt="Niti Resik">
-                </div>
-                <span class="text-lg font-bold tracking-tight">Niti Resik</span>
+                <img src="{{ asset('images/logo-primary.png') }}" class="w-10" alt="Niti Resik">
+                <span class="text-lg font-bold text-primary tracking-tight">Niti Resik</span>
             </a>
-
             <nav class="hidden items-center gap-1 md:flex">
                 @foreach ($navLinks as [$label, $url, $isActive])
                     <a href="{{ $url }}" class="rounded-lg px-3 py-2 text-sm font-medium {{ $isActive ? 'text-primary-700' : 'text-gray-600 hover:text-primary-900' }}">{{ $label }}</a>
                 @endforeach
             </nav>
-
             <div class="hidden items-center gap-2 md:flex">
                 @auth
                     @if ($panelRoute)
@@ -68,12 +73,10 @@
                     <a href="/login" class="rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">Masuk</a>
                 @endauth
             </div>
-
             <button @click="open = !open" class="md:hidden rounded-lg p-2 text-gray-600 hover:bg-gray-100" aria-label="Menu">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
         </div>
-
         <div x-show="open" x-cloak x-transition class="border-t border-gray-200 bg-white md:hidden">
             <div class="space-y-1 px-4 py-3">
                 @foreach ($navLinks as [$label, $url, $isActive])
@@ -92,18 +95,18 @@
         </div>
     </header>
 
-    <main>{{ $slot }}</main>
+    {{-- Beranda: konten mulai di bawah navbar (hero sudah punya padding sendiri).
+         Halaman lain: beri jarak setinggi navbar agar tidak tertutup. --}}
+    <main class="{{ $isBeranda ? '' : 'pt-16' }}">{{ $slot }}</main>
 
     <footer class="mt-20 border-t border-gray-200 bg-gray-50">
         <div class="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
             <div class="lg:col-span-2">
                 <div class="flex items-center gap-2.5">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500 text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
-                    </div>
-                    <span class="text-lg font-bold">Niti Resik</span>
+                    <img src="{{ asset('images/logo-primary.png') }}" class="w-10" alt="Niti Resik">
+                    <span class="text-lg font-bold text-primary tracking-tight">Niti Resik</span>
                 </div>
-                <p class="mt-3 max-w-sm text-sm text-gray-500">Ekonomi sirkular pengelolaan sampah Kabupaten Badung — dari warga, bank sampah, hingga UMKM daur ulang dalam satu ekosistem.</p>
+                <p class="mt-3 max-w-sm text-sm text-gray-500">Ekonomi sirkular pengelolaan sampah dari warga, bank sampah, hingga UMKM daur ulang dalam satu ekosistem.</p>
             </div>
             <div>
                 <p class="text-sm font-semibold text-primary-900">Jelajahi</p>
@@ -116,21 +119,17 @@
             </div>
             <div>
                 <p class="text-sm font-semibold text-primary-900">Unduh Aplikasi</p>
-                <p class="mt-3 text-sm text-gray-500">Untuk warga & petugas lapangan.</p>
+                <p class="mt-3 text-sm text-gray-500">Untuk masyarakat</p>
                 <div class="mt-3 flex flex-col gap-2">
                     <a href="#unduh" class="inline-flex items-center gap-2 rounded-lg bg-primary-900 px-3 py-2 text-xs font-semibold text-white hover:bg-primary-700">
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5V3.5c0-.6.3-1 .8-1.3L13 12 3.8 21.8c-.5-.3-.8-.7-.8-1.3Zm12.5-7L6 3.9l11.6 6.6-2.1 3Zm3.7 2.1-2.6-1.5-2.3 2.3 2.3 2.3 2.6-1.5c.7-.4.7-1.5 0-1.9ZM6 20.1l9.5-9.5 2.1 3L6 20.1Z"/></svg>
-                        Google Play
-                    </a>
-                    <a href="#unduh" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-primary-900 hover:bg-gray-100">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 12.9c0-2 1.6-2.9 1.7-3-1-1.4-2.4-1.6-3-1.6-1.3-.1-2.5.7-3.1.7-.6 0-1.6-.7-2.7-.7-1.4 0-2.7.8-3.4 2-1.4 2.5-.4 6.2 1 8.3.7 1 1.5 2.1 2.5 2 1-.1 1.4-.6 2.6-.6s1.5.6 2.6.6 1.7-1 2.4-2c.7-1.1 1-2.2 1-2.3-.1 0-1.9-.7-2-2.9ZM14.5 6c.5-.7.9-1.6.8-2.5-.8 0-1.8.5-2.3 1.2-.5.6-1 1.5-.8 2.4.9 0 1.8-.4 2.3-1.1Z"/></svg>
-                        App Store
+                        Unduh Aplikasi
                     </a>
                 </div>
             </div>
         </div>
         <div class="border-t border-gray-200 py-6">
-            <p class="mx-auto max-w-6xl px-4 text-xs text-gray-400">© {{ date('Y') }} Niti Resik · Kabupaten Badung, Bali</p>
+            <p class="mx-auto max-w-6xl px-4 text-xs text-gray-400">© {{ date('Y') }} Niti Resik</p>
         </div>
     </footer>
 </div>

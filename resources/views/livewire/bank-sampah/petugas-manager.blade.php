@@ -1,17 +1,18 @@
 <div class="space-y-6">
-    <div class="flex items-start justify-between gap-4">
+    {{-- Header --}}
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <h1 class="text-2xl font-semibold text-primary-900">Manajemen Petugas</h1>
             <p class="mt-1 text-sm text-gray-500">Kelola akun petugas bank sampah Anda.</p>
         </div>
-        <button wire:click="tambah" class="flex-none rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">+ Tambah Petugas</button>
+        <button wire:click="tambah" class="w-full flex-none rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 sm:w-auto">+ Tambah Petugas</button>
     </div>
-
     @if (session('ok'))
         <div class="rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700">{{ session('ok') }}</div>
     @endif
 
-    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    {{-- Tabel (desktop) --}}
+    <div class="hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm sm:block">
         <table class="w-full text-left text-sm">
             <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
                 <tr>
@@ -42,6 +43,30 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+
+    {{-- Kartu (mobile) --}}
+    <div class="space-y-3 sm:hidden">
+        @forelse ($petugas as $p)
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="truncate font-medium text-primary-900">{{ $p->name }}</p>
+                        <p class="truncate text-xs text-gray-500">{{ $p->email }}</p>
+                    </div>
+                    <button wire:click="toggleAktif({{ $p->id }})"
+                            class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium {{ $p->is_active ? 'bg-primary-50 text-primary-700' : 'bg-gray-100 text-gray-500' }}">
+                        {{ $p->is_active ? 'Aktif' : 'Nonaktif' }}
+                    </button>
+                </div>
+                <div class="mt-3 flex gap-2 border-t border-gray-100 pt-3">
+                    <button wire:click="bukaReset({{ $p->id }})" class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">Reset Sandi</button>
+                    <button wire:click="konfirmHapus({{ $p->id }})" class="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100">Hapus</button>
+                </div>
+            </div>
+        @empty
+            <div class="rounded-xl border border-gray-200 bg-white px-4 py-8 text-center text-gray-400">Belum ada petugas.</div>
+        @endforelse
     </div>
 
     {{-- Modal tambah petugas --}}

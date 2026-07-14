@@ -15,8 +15,31 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-[#f5f6f8] text-primary-900 antialiased">
+@php
+    // Definisikan tab sekali, dipakai di desktop (tab bar) & mobile (bottom nav)
+    $tabs = [
+        ['route' => 'bank-sampah.dashboard', 'label' => 'Dashboard', 'match' => 'bank-sampah.dashboard', 'role' => null,
+         'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3v-6h6v6h3a1 1 0 001-1V10"/>'],
+        ['route' => 'bank-sampah.setor', 'label' => 'Setor', 'match' => 'bank-sampah.setor', 'role' => 'petugas_bank_sampah',
+         'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l4-4m-4 4l-4-4M4 20h16"/>'],
+        ['route' => 'bank-sampah.riwayat', 'label' => 'Riwayat', 'match' => 'bank-sampah.riwayat', 'role' => null,
+         'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3M3 12a9 9 0 1018 0 9 9 0 00-18 0z"/>'],
+        ['route' => 'bank-sampah.harga', 'label' => 'Harga', 'match' => 'bank-sampah.harga', 'role' => null,
+         'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M3 5v6.5a2 2 0 00.6 1.4l7.5 7.5a2 2 0 002.8 0l5.6-5.6a2 2 0 000-2.8L14.9 4.6A2 2 0 0013.5 4H5a2 2 0 00-2 2z"/>'],
+        ['route' => 'bank-sampah.petugas', 'label' => 'Petugas', 'match' => 'bank-sampah.petugas', 'role' => 'admin_bank_sampah',
+         'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-1a3 3 0 00-5.36-1.87M17 20H7m10 0v-1a5 5 0 00-.9-2.87M7 20H2v-1a3 3 0 015.36-1.87M7 20v-1a5 5 0 01.9-2.87m0 0A5 5 0 0112 12a5 5 0 014.1 2.13M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>'],
+        ['route' => 'bank-sampah.info', 'label' => 'Info', 'match' => 'bank-sampah.info', 'role' => 'admin_bank_sampah',
+         'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'],
+        ['route' => 'bank-sampah.profil', 'label' => 'Profil', 'match' => 'bank-sampah.profil', 'role' => null,
+         'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 21a8 8 0 0116 0"/>'],
+    ];
+    // Saring sesuai role user
+    $visibleTabs = collect($tabs)->filter(fn ($t) => ! $t['role'] || auth()->user()?->hasRole($t['role']))->values();
+@endphp
 <div class="min-h-full">
-    <header class="border-b border-gray-200 bg-white">
+
+    {{-- ======== HEADER + NAV (fixed) ======== --}}
+    <header class="fixed inset-x-0 top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
         <div class="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
             <div class="flex items-center gap-2.5">
                 <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500 text-white">
@@ -27,12 +50,10 @@
                     <p class="text-xs text-gray-500 leading-tight">{{ auth()->user()?->bankSampah?->nama ?? 'Bank Sampah' }}</p>
                 </div>
             </div>
-
             <div class="flex items-center gap-3" x-data="{ confirmLogout: false }">
                 <span class="hidden text-sm text-gray-500 sm:inline">{{ auth()->user()?->name }}</span>
                 <button type="button" @click="confirmLogout = true"
                         class="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-primary-900 hover:bg-gray-50">Keluar</button>
-
                 <div x-show="confirmLogout" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div x-show="confirmLogout" x-transition.opacity class="fixed inset-0 bg-primary-900/40"></div>
                     <div x-show="confirmLogout" x-transition @click.outside="confirmLogout = false"
@@ -50,40 +71,39 @@
                 </div>
             </div>
         </div>
+
+        {{-- Tab bar (desktop only) --}}
+        <nav class="hidden border-t border-gray-100 bg-white md:block">
+            <div class="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4">
+                @php $tab = 'whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium'; @endphp
+                @foreach ($visibleTabs as $t)
+                    <a href="{{ route($t['route']) }}"
+                       class="{{ $tab }} {{ request()->routeIs($t['match']) ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">{{ $t['label'] }}</a>
+                @endforeach
+            </div>
+        </nav>
     </header>
 
-    <nav class="border-b border-gray-200 bg-white">
-        <div class="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4">
-            @php $tab = 'whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium'; @endphp
-            <a href="{{ route('bank-sampah.dashboard') }}"
-               class="{{ $tab }} {{ request()->routeIs('bank-sampah.dashboard') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Dashboard</a>
-
-            @role('petugas_bank_sampah')
-                <a href="{{ route('bank-sampah.setor') }}"
-                   class="{{ $tab }} {{ request()->routeIs('bank-sampah.setor') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Setor Sampah</a>
-            @endrole
-
-            <a href="{{ route('bank-sampah.riwayat') }}"
-               class="{{ $tab }} {{ request()->routeIs('bank-sampah.riwayat') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Riwayat Setor</a>
-
-            <a href="{{ route('bank-sampah.harga') }}"
-               class="{{ $tab }} {{ request()->routeIs('bank-sampah.harga') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Harga</a>
-
-            @role('admin_bank_sampah')
-                <a href="{{ route('bank-sampah.petugas') }}"
-                   class="{{ $tab }} {{ request()->routeIs('bank-sampah.petugas') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Petugas</a>
-                <a href="{{ route('bank-sampah.info') }}"
-                   class="{{ $tab }} {{ request()->routeIs('bank-sampah.info') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Info Bank Sampah</a>
-            @endrole
-
-            <a href="{{ route('bank-sampah.profil') }}"
-               class="{{ $tab }} {{ request()->routeIs('bank-sampah.profil') ? 'border-primary-500 text-primary-700' : 'border-transparent text-gray-500 hover:text-primary-900' }}">Profil</a>
-        </div>
-    </nav>
-
-    <main class="mx-auto max-w-5xl px-4 py-6">
+    {{-- ======== KONTEN ========
+         Padding-top: mobile hanya header (h-16 = pt-16); desktop header + tab bar (pt-28).
+         Padding-bottom mobile: ruang untuk bottom nav (pb-24). --}}
+    <main class="mx-auto max-w-5xl px-4 pb-24 pt-16 md:pb-6 md:pt-28">
         {{ $slot }}
     </main>
+
+    {{-- ======== BOTTOM NAV (mobile only) ======== --}}
+    <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white md:hidden">
+        <div class="mx-auto flex max-w-5xl items-stretch overflow-x-auto">
+            @foreach ($visibleTabs as $t)
+                @php $active = request()->routeIs($t['match']); @endphp
+                <a href="{{ route($t['route']) }}"
+                   class="flex min-w-[64px] flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium {{ $active ? 'text-primary-700' : 'text-gray-500' }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">{!! $t['icon'] !!}</svg>
+                    {{ $t['label'] }}
+                </a>
+            @endforeach
+        </div>
+    </nav>
 </div>
 </body>
 </html>

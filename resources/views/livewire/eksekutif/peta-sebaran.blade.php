@@ -4,20 +4,24 @@
         <p class="mt-1 text-sm text-gray-500">Sebaran TPS, bank sampah, UMKM, dan laporan di wilayah Anda.</p>
     </div>
 
+    {{-- Filter --}}
     <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <div class="flex flex-wrap items-end gap-4">
-            <div>
-                <label class="block text-xs font-medium text-gray-500">Rentang laporan — Dari</label>
-                <input type="date" wire:model="dari" class="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <div class="grid grid-cols-2 gap-3 sm:flex sm:gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500">Rentang laporan — Dari</label>
+                    <input type="date" wire:model="dari" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500">Sampai</label>
+                    <input type="date" wire:model="sampai" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-500">Sampai</label>
-                <input type="date" wire:model="sampai" class="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-            </div>
-            <button wire:click="terapkan" class="rounded-lg bg-primary-500 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-700">Terapkan</button>
+            <button wire:click="terapkan" class="rounded-lg bg-primary-500 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-700 sm:ml-auto">Terapkan</button>
         </div>
 
-        <div class="mt-4 flex flex-wrap gap-4">
+        {{-- Toggle jenis marker --}}
+        <div class="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-4">
             @foreach ([
                 ['tps', 'TPS', '#0ea5e9', $jumlah['tps']],
                 ['bank_sampah', 'Bank Sampah', '#057D5D', $jumlah['bank_sampah']],
@@ -34,7 +38,8 @@
         </div>
     </div>
 
-    <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    {{-- Peta --}}
+    <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
         <div wire:ignore x-data="{ map:null, layer:null }" x-init="
             const pin = (c) => L.divIcon({ className:'', iconSize:[26,36], iconAnchor:[13,36], popupAnchor:[0,-32], html:`<svg width='26' height='36' viewBox='0 0 26 36' xmlns='http://www.w3.org/2000/svg'><path d='M13 0C5.8 0 0 5.8 0 13c0 9.2 13 23 13 23s13-13.8 13-23C26 5.8 20.2 0 13 0z' fill='${c}'/><circle cx='13' cy='13' r='5' fill='white'/></svg>` });
             const colors = { tps:'#0ea5e9', bank_sampah:'#057D5D', umkm:'#f59e0b', laporan:'#ef4444' };
@@ -56,7 +61,7 @@
             draw(@js($markers));
             setTimeout(()=>map.invalidateSize(),200);
             window.addEventListener('peta-updated', (e) => draw(e.detail.markers));
-        "><div x-ref="map" class="h-[30rem] w-full rounded-lg border border-gray-200"></div></div>
+        "><div x-ref="map" class="h-80 w-full rounded-lg border border-gray-200 sm:h-[30rem]"></div></div>
     </div>
 
     {{-- Modal detail marker --}}
@@ -77,8 +82,7 @@
                 </div>
                 <button type="button" wire:click="$set('showDetail', false)" class="text-gray-400 hover:text-gray-600">✕</button>
             </div>
-
-            <div class="max-h-[70vh] overflow-y-auto px-6 py-5">
+            <div class="max-h-[70vh] overflow-y-auto px-4 py-5 sm:px-6">
                 @if ($detail['jenis'] === 'laporan')
                     <p class="text-lg font-semibold text-primary-900">{{ $detail['judul'] }}</p>
                     <div class="mt-1 flex items-center gap-2 text-xs"><x-status-badge :status="$detail['status']" /><span class="text-gray-400">{{ $detail['tanggal'] }}</span></div>
@@ -93,7 +97,6 @@
                             @foreach ($detail['images'] as $img)<a href="{{ asset('storage/' . $img->path) }}" target="_blank"><img src="{{ asset('storage/' . $img->path) }}" class="aspect-square w-full rounded-lg border border-gray-200 object-cover" alt=""></a>@endforeach
                         </div>
                     @endif
-
                 @elseif ($detail['jenis'] === 'umkm')
                     <div class="flex items-start gap-4">
                         @if ($detail['foto'])<img src="{{ asset('storage/' . $detail['foto']) }}" class="h-20 w-20 flex-none rounded-lg border border-gray-200 object-cover" alt="">@endif
@@ -109,8 +112,8 @@
                         <div class="rounded-lg border border-gray-200 p-3"><p class="text-xs text-gray-400">Produk Aktif</p><p class="text-lg font-semibold text-primary-700">{{ $detail['produkAktif'] }}</p></div>
                     </div>
                     <p class="mt-4 text-sm font-semibold text-primary-900">Daftar Produk</p>
-                    <div class="mt-2 overflow-hidden rounded-lg border border-gray-200">
-                        <table class="w-full text-left text-sm">
+                    <div class="mt-2 overflow-x-auto rounded-lg border border-gray-200">
+                        <table class="w-full min-w-[420px] text-left text-sm">
                             <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500"><tr><th class="px-3 py-2 font-semibold">Produk</th><th class="px-3 py-2 text-right font-semibold">Harga</th><th class="px-3 py-2 text-right font-semibold">Stok</th><th class="px-3 py-2 text-center font-semibold">Status</th></tr></thead>
                             <tbody class="divide-y divide-gray-100">
                                 @forelse ($detail['produk'] as $p)
@@ -128,7 +131,6 @@
                             </tbody>
                         </table>
                     </div>
-
                 @elseif ($detail['jenis'] === 'tps')
                     <p class="text-lg font-semibold text-primary-900">{{ $detail['nama'] }}</p>
                     @if ($detail['alamat'])<p class="text-xs text-gray-500">{{ $detail['alamat'] }}</p>@endif
@@ -139,7 +141,6 @@
                         <div class="rounded-lg border border-gray-200 p-3"><p class="text-xs text-gray-400">Tagihan Menunggu</p><p class="text-lg font-semibold text-amber-600">{{ $detail['tagihanMenunggu'] }}</p></div>
                         <div class="rounded-lg border border-gray-200 p-3"><p class="text-xs text-gray-400">Tarif</p><p class="text-lg font-semibold text-primary-900">{{ $detail['berbayar'] ? 'Rp ' . number_format($detail['tarif'], 0, ',', '.') : 'Gratis' }}</p></div>
                     </div>
-
                 @elseif ($detail['jenis'] === 'bank_sampah')
                     <p class="text-lg font-semibold text-primary-900">{{ $detail['nama'] }}</p>
                     @if ($detail['alamat'])<p class="text-xs text-gray-500">{{ $detail['alamat'] }}</p>@endif

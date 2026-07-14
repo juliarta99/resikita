@@ -4,7 +4,8 @@
         <p class="mt-1 text-sm text-gray-500">Daftar harga berlaku untuk seluruh bank sampah. Hanya dapat diubah oleh admin sistem.</p>
     </div>
 
-    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    {{-- Tabel (desktop) --}}
+    <div class="hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm sm:block">
         <table class="w-full text-left text-sm">
             <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
                 <tr>
@@ -33,5 +34,27 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+
+    {{-- Kartu (mobile) --}}
+    <div class="space-y-3 sm:hidden">
+        @forelse ($prices as $p)
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm {{ $p->is_active ? '' : 'opacity-60' }}">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="font-medium text-primary-900">{{ $p->jenis_sampah }}</p>
+                        <p class="text-xs text-gray-400">per {{ $p->satuan }}</p>
+                    </div>
+                    @if ($p->is_active)
+                        <span class="shrink-0 rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700">Aktif</span>
+                    @else
+                        <span class="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">Nonaktif</span>
+                    @endif
+                </div>
+                <p class="mt-2 text-lg font-semibold text-primary-700">Rp {{ number_format($p->harga_per_kg, 0, ',', '.') }}</p>
+            </div>
+        @empty
+            <div class="rounded-xl border border-gray-200 bg-white px-4 py-8 text-center text-gray-400">Belum ada data harga.</div>
+        @endforelse
     </div>
 </div>

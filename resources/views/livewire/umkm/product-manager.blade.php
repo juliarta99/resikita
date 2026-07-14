@@ -1,16 +1,17 @@
 <div class="space-y-6">
-    <div class="flex items-start justify-between gap-4">
+    {{-- Header --}}
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <h1 class="text-2xl font-semibold text-primary-900">Produk</h1>
             <p class="mt-1 text-sm text-gray-500">Kelola produk daur ulang yang dijual UMKM Anda.</p>
         </div>
-        <button wire:click="tambah" class="flex-none rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">+ Tambah</button>
+        <button wire:click="tambah" class="w-full flex-none rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 sm:w-auto">+ Tambah</button>
     </div>
-
     @if (session('ok'))
         <div class="rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700">{{ session('ok') }}</div>
     @endif
 
+    {{-- Grid produk --}}
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @forelse ($produk as $p)
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -23,16 +24,16 @@
                 </div>
                 <div class="p-4">
                     <div class="flex items-start justify-between gap-2">
-                        <p class="font-medium text-primary-900">{{ $p->nama }}</p>
+                        <p class="min-w-0 font-medium text-primary-900">{{ $p->nama }}</p>
                         @if (! $p->is_active)
-                            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">nonaktif</span>
+                            <span class="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">nonaktif</span>
                         @endif
                     </div>
                     <p class="mt-1 text-sm text-primary-700">Rp {{ number_format($p->harga, 0, ',', '.') }}</p>
                     <p class="text-xs text-gray-400">Stok: {{ $p->stok }} · {{ $p->berat }} g</p>
-                    <div class="mt-3 flex gap-3">
-                        <button wire:click="edit({{ $p->id }})" class="text-sm font-medium text-primary-500 hover:text-primary-700">Ubah</button>
-                        <button wire:click="konfirmHapus({{ $p->id }})" class="text-sm font-medium text-red-600 hover:text-red-700">Hapus</button>
+                    <div class="mt-3 flex gap-2 border-t border-gray-100 pt-3">
+                        <button wire:click="edit({{ $p->id }})" class="rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-100">Ubah</button>
+                        <button wire:click="konfirmHapus({{ $p->id }})" class="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100">Hapus</button>
                     </div>
                 </div>
             </div>
@@ -42,24 +43,23 @@
             </div>
         @endforelse
     </div>
-
     <div>{{ $produk->links() }}</div>
 
+    {{-- Modal form --}}
     <x-modal active="showForm" max-width="max-w-2xl">
         <form wire:submit="simpan">
-            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between border-b border-gray-200 px-4 py-4 sm:px-6">
                 <h2 class="text-base font-semibold text-primary-900">{{ $editingId ? 'Ubah Produk' : 'Tambah Produk' }}</h2>
                 <button type="button" wire:click="batal" class="text-gray-400 hover:text-gray-600">✕</button>
             </div>
-
-            <div class="max-h-[70vh] space-y-4 overflow-y-auto px-6 py-5">
+            <div class="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="sm:col-span-2">
                         <label class="block text-sm font-medium text-primary-900">Nama Produk</label>
                         <input wire:model="nama" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
                         @error('nama') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
-                    <div>
+                    <div class="sm:col-span-2">
                         <label class="block text-sm font-medium text-primary-900">Kategori</label>
                         <select wire:model="kategori_id" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
                             <option value="">— Pilih kategori —</option>
@@ -74,15 +74,17 @@
                         <input type="number" min="0" wire:model="harga" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
                         @error('harga') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-primary-900">Stok</label>
-                        <input type="number" min="0" wire:model="stok" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                        @error('stok') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-primary-900">Berat (gram)</label>
-                        <input type="number" min="0" wire:model="berat" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                        @error('berat') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    <div class="grid grid-cols-2 gap-4 sm:contents">
+                        <div>
+                            <label class="block text-sm font-medium text-primary-900">Stok</label>
+                            <input type="number" min="0" wire:model="stok" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                            @error('stok') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-primary-900">Berat (gram)</label>
+                            <input type="number" min="0" wire:model="berat" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                            @error('berat') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
                     </div>
                     <div class="sm:col-span-2">
                         <label class="block text-sm font-medium text-primary-900">Deskripsi</label>
@@ -95,11 +97,9 @@
                         </label>
                     </div>
                 </div>
-
                 {{-- Gambar --}}
                 <div>
                     <label class="block text-sm font-medium text-primary-900">Gambar Produk</label>
-
                     @if (! empty($existingImages))
                         <div class="mt-2 flex flex-wrap gap-2">
                             @foreach ($existingImages as $im)
@@ -111,12 +111,10 @@
                             @endforeach
                         </div>
                     @endif
-
                     <input type="file" wire:model="newImages" multiple accept="image/*"
                            class="mt-2 block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100">
                     @error('newImages.*') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     <div wire:loading wire:target="newImages" class="mt-1 text-xs text-gray-400">Mengunggah…</div>
-
                     @if (! empty($newImages))
                         <div class="mt-2 flex flex-wrap gap-2">
                             @foreach ($newImages as $img)
@@ -128,8 +126,7 @@
                     @endif
                 </div>
             </div>
-
-            <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+            <div class="flex justify-end gap-2 border-t border-gray-200 px-4 py-4 sm:px-6">
                 <button type="button" wire:click="batal" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-primary-900 hover:bg-gray-50">Batal</button>
                 <button type="submit" class="rounded-lg bg-primary-500 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-700">{{ $editingId ? 'Perbarui' : 'Simpan' }}</button>
             </div>
