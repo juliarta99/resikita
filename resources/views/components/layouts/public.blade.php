@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? 'Niti Resik — Ekonomi Sirkular Sampah Kabupaten Badung' }}</title>
     <meta name="description" content="Platform ekonomi sirkular pengelolaan sampah Kabupaten Badung: bank sampah digital, pelaporan, direktori UMKM daur ulang, dan edukasi.">
+    <link rel="icon" type="image/png" href="{{ asset('images/icon.png') }}">
+    <meta name="theme-color" content="#057D5D">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
