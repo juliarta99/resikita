@@ -16,9 +16,9 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     protected $fillable = [
-        'name', 'email', 'phone', 'phone_verified_at', 'password', 'kode_qr', 'is_active',
+        'name', 'email', 'nik', 'tanggal_lahir', 'jenis_kelamin', 'phone', 'phone_verified_at', 'password', 'kode_qr', 'is_active',
         'kecamatan_id', 'kelurahan_id', 'banjar_id', 'tps_id', 'bank_sampah_id', 'umkm_id',
-        'lat', 'lng', 'nik', 'tanggal_lahir', 'jenis_kelamin',
+        'lat', 'lng',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -28,9 +28,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
+            'tanggal_lahir'     => 'date',
             'password'          => 'hashed',
             'is_active'         => 'boolean',
-            'tanggal_lahir' => 'date',
         ];
     }
 
@@ -67,5 +67,10 @@ class User extends Authenticatable
     public function wallet(): HasOne
     {
         return $this->hasOne(Wallet::class);
+    }
+
+    public function otpTokens(): HasMany
+    {
+        return $this->hasMany(OtpToken::class);
     }
 }

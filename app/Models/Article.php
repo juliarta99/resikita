@@ -7,12 +7,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Article extends Model
 {
-    protected $fillable = ['author_id', 'tipe', 'judul', 'slug', 'konten', 'thumbnail', 'status', 'published_at'];
+    protected $fillable = [
+        'author_id', 'tipe', 'judul', 'slug', 'konten', 'thumbnail',
+        'status', 'published_at', 'dilihat', 'is_unggulan', 'video_url',
+    ];
 
     protected function casts(): array
     {
         return [
             'published_at' => 'datetime',
+            'is_unggulan'  => 'boolean',
+            'dilihat'      => 'integer',
         ];
     }
 

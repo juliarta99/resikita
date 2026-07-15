@@ -10,7 +10,7 @@ class Umkm extends Model
 {
     protected $table = 'umkm';
 
-    protected $fillable = ['nama', 'deskripsi', 'alamat', 'lat', 'lng', 'no_hp', 'foto', 'banjar_id'];
+    protected $fillable = ['nama', 'status', 'deskripsi', 'alamat', 'lat', 'lng', 'no_hp', 'foto', 'banjar_id'];
 
     public function banjarDinas(): BelongsTo
     {
@@ -20,5 +20,10 @@ class Umkm extends Model
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function admins(): HasMany
+    {
+        return $this->hasMany(User::class);
     }
 }

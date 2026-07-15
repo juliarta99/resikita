@@ -10,8 +10,9 @@ return new class extends Migration
     {
         Schema::create('chat_conversations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->string('judul')->nullable();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('title')->default('Percakapan Baru');
+            $table->json('messages')->nullable();   // [{role:'user'|'model', text, at}]
             $table->timestamps();
         });
     }

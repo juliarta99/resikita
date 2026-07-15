@@ -14,32 +14,51 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
- * Logika inti pembuatan akun untuk semua role non-mandiri.
- * Dipakai oleh panel web (Livewire) saat provisioning akun bertingkat.
+ * Logika inti pembuatan & pembaruan akun untuk role non-mandiri.
  */
 class AccountProvisioningService
 {
     /**
-     * Buat user + assign role + set scope wilayah/entitas.
+     * Buat user + assign role + set scope.
      *
-     * @param array $data  ['name', 'email'(opsional), 'phone'(opsional), 'password'(opsional)]
-     * @param array $scope kolom scope: kecamatan_id, kelurahan_id, banjar_id, tps_id, bank_sampah_id, umkm_id
+     * @param array $data  name, email, phone?, nip?, jenis_kelamin?, password?
      */
-    public function provision(string $role, array $data, array $scope = []): User
+    public function provision(string $role, array $data, array $scope = [], bool $active = true): User
     {
-        return DB::transaction(function () use ($role, $data, $scope) {
+        return DB::transaction(function () use ($role, $data, $scope, $active) {
             $user = User::create(array_merge([
-                'name'      => $data['name'],
-                'email'     => $data['email'] ?? null,
-                'phone'     => $data['phone'] ?? null,
-                'password'  => Hash::make($data['password'] ?? Str::password(12)),
-                'is_active' => true,
+                'name'          => $data['name'],
+                'email'         => $data['email'] ?? null,
+                'phone'         => $data['phone'] ?? null,
+                'nip'           => $data['nip'] ?? null,
+                'jenis_kelamin' => $data['jenis_kelamin'] ?? null,
+                'password'      => Hash::make($data['password'] ?? Str::password(12)),
+                'is_active'     => $active,
             ], $scope));
 
             $user->assignRole($role);
 
             return $user;
         });
+    }
+
+    /**
+     * Perbarui data akun yang sudah ada (password opsional).
+     */
+    public function updateAccount(User $user, array $data): void
+    {
+        $attrs = [
+            'name'          => $data['name'],
+            'email'         => $data['email'],
+            'nip'           => $data['nip'] ?? null,
+            'jenis_kelamin' => $data['jenis_kelamin'] ?? null,
+        ];
+
+        if (! empty($data['password'])) {
+            $attrs['password'] = Hash::make($data['password']);
+        }
+
+        $user->update($attrs);
     }
 
     public function createCamat(Kecamatan $kecamatan, array $data): User
@@ -89,5 +108,40 @@ class AccountProvisioningService
     public function createPetugasLapangan(array $data, array $scope = []): User
     {
         return $this->provision('petugas_lapangan', $data, $scope);
+    }
+
+    public function selfRegisterUmkm(array $data): Umkm
+    {
+        return DB::transaction(function () use ($data) {
+            $umkm = Umkm::create([
+                'nama'      => $data['nama'],
+                'deskripsi' => $data['deskripsi'] ?? null,
+                'alamat'    => $data['alamat'] ?? null,
+                'no_hp'     => $data['no_hp'] ?? null,
+                'status'    => 'menunggu',
+            ]);
+
+            $this->provision('umkm', [
+                'name'     => $data['pemilik_name'],
+                'email'    => $data['pemilik_email'],
+                'phone'    => $data['pemilik_phone'] ?? null,
+                'password' => $data['password'],
+            ], ['umkm_id' => $umkm->id], active: false);
+
+            return $umkm;
+        });
+    }
+
+    public function approveUmkm(Umkm $umkm): void
+    {
+        DB::transaction(function () use ($umkm) {
+            $umkm->update(['status' => 'aktif']);
+            User::where('umkm_id', $umkm->id)->update(['is_active' => true]);
+        });
+    }
+
+    public function rejectUmkm(Umkm $umkm): void
+    {
+        $umkm->update(['status' => 'ditolak']);
     }
 }

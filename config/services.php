@@ -57,4 +57,9 @@ return [
         'key'       => env('RAJAONGKIR_API_KEY'),
         'origin_id' => env('RAJAONGKIR_ORIGIN_ID'),
     ],
+
+    'whatsapp' => [
+        'driver'       => env('WHATSAPP_DRIVER', 'log'),
+        'fonnte_token' => env('FONNTE_TOKEN'),
+    ],
 ];

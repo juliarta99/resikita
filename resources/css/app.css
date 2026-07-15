@@ -5,14 +5,48 @@
 @source "../../app/Livewire";
 @source "../../vendor/livewire/livewire/src/**/*.blade.php";
 
-/* ============================================================
-   Palet Niti Resik (default primary = 500)
-   ============================================================ */
 @theme {
+    /* Font utama */
+    --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    /* Palet Niti Resik (default primary = 500) */
     --color-primary-50: #e0f8f1;
     --color-primary-100: #a3e6d2;
     --color-primary-500: #057d5d;
-    --color-primary-700: #046a4f; /* turunan untuk hover/active */
+    --color-primary-700: #046a4f;
     --color-primary-900: #023628;
-    --color-primary: #057d5d;      /* alias: bg-primary, text-primary, dll */
+    --color-primary: #057d5d;
 }
+
+/* Konten artikel (hasil render Markdown) */
+.article-content { color: #374151; line-height: 1.75; }
+.article-content h1, .article-content h2, .article-content h3, .article-content h4 { color: #023628; font-weight: 600; margin-top: 1.5em; margin-bottom: .5em; line-height: 1.3; }
+.article-content h2 { font-size: 1.4rem; }
+.article-content h3 { font-size: 1.15rem; }
+.article-content p { margin: .75em 0; }
+.article-content ul { list-style: disc; padding-left: 1.5em; margin: .75em 0; }
+.article-content ol { list-style: decimal; padding-left: 1.5em; margin: .75em 0; }
+.article-content li { margin: .25em 0; }
+.article-content a { color: #057d5d; text-decoration: underline; }
+.article-content blockquote { border-left: 3px solid #A3E6D2; padding-left: 1em; color: #6b7280; margin: 1em 0; }
+.article-content strong { color: #023628; font-weight: 600; }
+.article-content img { border-radius: .5rem; margin: 1em 0; max-width: 100%; }
+.article-content code { background: #f3f4f6; padding: .1em .35em; border-radius: .25rem; font-size: .9em; }
+.article-content hr { margin: 1.5em 0; border-color: #e5e7eb; }
+
+/* Embed video (YouTube) di konten artikel */
+.article-content iframe,
+.article-content .ql-video { width: 100%; aspect-ratio: 16 / 9; height: auto; border: 0; border-radius: .5rem; margin: 1em 0; }
+
+/* Penyajian rekomendasi AI (hasil Markdown → HTML) */
+.ai-rec { color: #374151; font-size: .875rem; line-height: 1.65; }
+.ai-rec > *:first-child { margin-top: 0; }
+.ai-rec h1, .ai-rec h2, .ai-rec h3, .ai-rec h4 { margin: 1.1em 0 .35em; font-weight: 600; color: #023628; font-size: .95rem; line-height: 1.3; }
+.ai-rec p { margin: .5em 0; }
+.ai-rec strong { font-weight: 600; color: #023628; }
+.ai-rec ul { margin: .5em 0; padding-left: 1.1rem; list-style: disc; }
+.ai-rec ol { margin: .5em 0; padding-left: 1.25rem; list-style: decimal; }
+.ai-rec li { margin: .25em 0; }
+.ai-rec li::marker { color: #057D5D; }
+.ai-rec blockquote { margin: .6em 0; padding-left: .75rem; border-left: 3px solid #A3E6D2; color: #4b5563; }
+.ai-rec a { color: #046A4F; text-decoration: underline; }

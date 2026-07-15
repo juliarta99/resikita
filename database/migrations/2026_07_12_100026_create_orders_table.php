@@ -20,6 +20,7 @@ return new class extends Migration
             $table->integer('destination_id')->nullable();
             $table->string('kurir')->nullable();
             $table->string('no_resi')->nullable();
+            $table->text('snap_token')->nullable();
             $table->timestamps();
         });
     }
