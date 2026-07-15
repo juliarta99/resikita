@@ -8,7 +8,7 @@
     @endif
 
     {{-- Kartu saldo --}}
-    <div class="flex flex-col gap-4 rounded-2xl bg-primary-600 p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">
+    <div class="flex flex-col gap-4 rounded-2xl bg-primary-500 p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div>
             <p class="text-sm text-primary-100">Total Saldo</p>
             <p class="mt-1 text-2xl font-bold sm:text-3xl">Rp {{ number_format($saldo, 0, ',', '.') }}</p>
@@ -34,7 +34,7 @@
                                 <p class="text-xs text-gray-500">{{ $t->keterangan }}</p>
                                 <p class="text-xs text-gray-400">{{ $t->created_at->format('d M Y H:i') }}</p>
                             </td>
-                            <td class="whitespace-nowrap px-4 py-3 text-right align-top font-semibold sm:px-5 {{ $t->jumlah < 0 ? 'text-red-600' : 'text-primary-600' }}">
+                            <td class="whitespace-nowrap px-4 py-3 text-right align-top font-semibold sm:px-5 {{ $t->jumlah < 0 ? 'text-red-600' : 'text-primary-500' }}">
                                 {{ $t->jumlah < 0 ? '-' : '+' }}Rp {{ number_format(abs($t->jumlah), 0, ',', '.') }}
                             </td>
                         </tr>
@@ -106,7 +106,7 @@
                 </div>
                 <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                     <button wire:click="$set('showTarik', false)" class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
-                    <button wire:click="ajukan" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">Ajukan Penarikan</button>
+                    <button wire:click="ajukan" class="rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">Ajukan Penarikan</button>
                 </div>
             </div>
         </div>

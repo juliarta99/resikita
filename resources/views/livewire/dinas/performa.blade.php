@@ -18,8 +18,8 @@
                 </div>
             </div>
             <div class="flex flex-col gap-2 sm:ml-auto sm:flex-row">
-                <button wire:click="exportKategori" class="rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50">Export Kategori</button>
-                <button wire:click="exportPetugas" class="rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50">Export Petugas</button>
+                <button wire:click="exportKategori" class="rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-500 hover:bg-primary-50">Export Kategori</button>
+                <button wire:click="exportPetugas" class="rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-500 hover:bg-primary-50">Export Petugas</button>
             </div>
         </div>
     </div>
@@ -60,7 +60,7 @@
                         <div class="mt-1 h-2.5 rounded-full bg-gray-100">
                             {{-- Panjang = volume laporan; isi gelap = yang sudah selesai --}}
                             <div class="h-2.5 rounded-full bg-primary-100" style="width: {{ $lebarVolume }}%">
-                                <div class="h-2.5 rounded-full bg-primary-600" style="width: {{ $lebarSelesai }}%"></div>
+                                <div class="h-2.5 rounded-full bg-primary-500" style="width: {{ $lebarSelesai }}%"></div>
                             </div>
                         </div>
                     </div>

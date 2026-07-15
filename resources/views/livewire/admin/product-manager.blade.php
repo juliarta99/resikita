@@ -4,7 +4,7 @@
             <h1 class="text-2xl font-semibold text-primary-900">Seluruh Produk</h1>
             <p class="mt-1 text-sm text-gray-500">Tinjau produk seluruh UMKM dan nonaktifkan bila perlu.</p>
         </div>
-        <button wire:click="export" class="flex-none rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50">Export Excel</button>
+        <button wire:click="export" class="flex-none rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-500 hover:bg-primary-50">Export Excel</button>
     </div>
 
     @if (session('ok'))
@@ -48,7 +48,7 @@
                         </td>
                         <td class="px-6 py-3 text-right whitespace-nowrap">
                             <button wire:click="lihat({{ $p->id }})" class="text-sm font-medium text-primary-500 hover:text-primary-700">Detail</button>
-                            <button wire:click="toggleAktif({{ $p->id }})" class="ml-3 text-sm font-medium {{ $p->is_active ? 'text-amber-600 hover:text-amber-700' : 'text-primary-600 hover:text-primary-700' }}">{{ $p->is_active ? 'Nonaktifkan' : 'Aktifkan' }}</button>
+                            <button wire:click="toggleAktif({{ $p->id }})" class="ml-3 text-sm font-medium {{ $p->is_active ? 'text-amber-600 hover:text-amber-700' : 'text-primary-500 hover:text-primary-700' }}">{{ $p->is_active ? 'Nonaktifkan' : 'Aktifkan' }}</button>
                         </td>
                     </tr>
                 @empty

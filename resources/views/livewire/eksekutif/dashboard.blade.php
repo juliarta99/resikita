@@ -5,7 +5,7 @@
             <h1 class="text-2xl font-semibold text-primary-900">Dashboard {{ $scopeLabel }}</h1>
             <p class="mt-1 text-sm text-gray-500">Ringkasan pengelolaan sampah wilayah Anda.</p>
         </div>
-        <button wire:click="exportStatistik" class="w-full flex-none rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50 sm:w-auto">Export Statistik</button>
+        <button wire:click="exportStatistik" class="w-full flex-none rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-500 hover:bg-primary-50 sm:w-auto">Export Statistik</button>
     </div>
 
     {{-- Kartu statistik: 2 kolom HP, 4 desktop --}}
@@ -72,7 +72,7 @@
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <div class="flex items-center gap-2">
-                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-50 text-primary-500">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16 2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3Z"/>
                         </svg>
@@ -92,7 +92,7 @@
                     <button wire:click="exportRekomendasi" class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-primary-900 hover:bg-gray-50 sm:flex-none">Export</button>
                 @endif
                 <button wire:click="generateAi" wire:loading.attr="disabled" wire:target="generateAi"
-                        class="flex-1 rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50 disabled:opacity-60 sm:flex-none">
+                        class="flex-1 rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-500 hover:bg-primary-50 disabled:opacity-60 sm:flex-none">
                     <span wire:loading.remove wire:target="generateAi">{{ $rekomendasi ? 'Perbarui' : 'Buat Rekomendasi' }}</span>
                     <span wire:loading wire:target="generateAi">Menganalisis…</span>
                 </button>

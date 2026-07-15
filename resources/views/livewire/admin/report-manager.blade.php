@@ -4,7 +4,7 @@
             <h1 class="text-2xl font-semibold text-primary-900">Seluruh Laporan</h1>
             <p class="mt-1 text-sm text-gray-500">Pantau, tinjau, dan kelola seluruh laporan warga.</p>
         </div>
-        <button wire:click="export" class="flex-none rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50">Export Excel</button>
+        <button wire:click="export" class="flex-none rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-500 hover:bg-primary-50">Export Excel</button>
     </div>
 
     @if (session('ok'))

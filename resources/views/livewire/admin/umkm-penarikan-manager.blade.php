@@ -51,7 +51,7 @@
                         <td class="px-6 py-3 text-right">
                             @if ($w->status === 'menunggu')
                                 <button wire:click="setujui({{ $w->id }})" wire:confirm="Setujui penarikan ini? Saldo UMKM akan dipotong."
-                                        class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-700">Setujui</button>
+                                        class="rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-700">Setujui</button>
                                 <button wire:click="konfirmTolak({{ $w->id }})"
                                         class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">Tolak</button>
                             @else

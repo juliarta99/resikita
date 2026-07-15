@@ -334,7 +334,7 @@
                 <h2 class="text-2xl font-bold text-primary-900">UMKM Unggulan</h2>
                 <p class="mt-1 text-sm text-gray-500">Dukung produk daur ulang warga lokal.</p>
             </div>
-            <a href="{{ route('publik.umkm.index') }}" class="text-sm font-semibold text-primary-600 hover:text-primary-700">Lihat semua →</a>
+            <a href="{{ route('publik.umkm.index') }}" class="text-sm font-semibold text-primary-500 hover:text-primary-700">Lihat semua →</a>
         </div>
         <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             @forelse ($umkms as $u)
@@ -363,18 +363,19 @@
                     <h2 class="text-2xl font-bold text-primary-900">Penanganan Laporan Terkini</h2>
                     <p class="mt-1 text-sm text-gray-500">Transparansi tindak lanjut laporan warga.</p>
                 </div>
-                <a href="{{ route('publik.laporan.index') }}" class="text-sm font-semibold text-primary-600 hover:text-primary-700">Lihat semua →</a>
+                <a href="{{ route('publik.laporan.index') }}" class="text-sm font-semibold text-primary-500 hover:text-primary-700">Lihat semua →</a>
             </div>
             <div class="mt-8 grid gap-4 md:grid-cols-2">
                 @foreach ($laporans as $l)
-                    <a href="{{ route('publik.laporan.show', $l) }}" class="flex gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+                    <a href="{{ route('publik.laporan.show', $l) }}"
+                    class="flex min-w-0 gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md">
                         <div class="h-16 w-16 flex-none overflow-hidden rounded-lg bg-gray-100">
                             @if ($l->foto)<img src="{{ asset('storage/' . $l->foto) }}" class="h-full w-full object-cover" alt="">@endif
                         </div>
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-medium text-primary-500">{{ $l->kategori?->nama }}</span>
-                                <x-status-badge :status="$l->status" />
+                        <div class="min-w-0 flex-1">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <span class="truncate text-xs font-medium text-primary-500">{{ $l->kategori?->nama }}</span>
+                                <span class="shrink-0"><x-status-badge :status="$l->status" /></span>
                             </div>
                             <h3 class="mt-0.5 truncate font-semibold text-primary-900">{{ $l->judul }}</h3>
                             <p class="mt-0.5 truncate text-xs text-gray-400">{{ $l->alamat }}</p>

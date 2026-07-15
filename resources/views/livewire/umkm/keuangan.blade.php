@@ -12,8 +12,8 @@
                 <div><label class="block text-xs font-medium text-gray-500">Sampai</label><input type="date" wire:model.live="sampai" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"></div>
             </div>
             <div class="flex flex-col gap-2 sm:ml-auto sm:flex-row">
-                <button wire:click="exportLabaRugi" class="rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50">Export Laba Rugi</button>
-                <button wire:click="exportPenjualan" class="rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50">Export Penjualan</button>
+                <button wire:click="exportLabaRugi" class="rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-500 hover:bg-primary-50">Export Laba Rugi</button>
+                <button wire:click="exportPenjualan" class="rounded-lg border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-500 hover:bg-primary-50">Export Penjualan</button>
             </div>
         </div>
     </div>

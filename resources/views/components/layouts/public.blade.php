@@ -7,7 +7,7 @@
     <meta name="description" content="Platform ekonomi sirkular pengelolaan sampah Kabupaten Badung: bank sampah digital, pelaporan, direktori UMKM daur ulang, dan edukasi.">
     <link rel="icon" type="image/png" href="{{ asset('images/icon.png') }}">
     <meta name="theme-color" content="#057D5D">
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -16,20 +16,21 @@
     <style>[x-cloak]{display:none!important}</style>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="h-full bg-white text-primary-900 antialiased">
+{{-- overflow-x-hidden = jaring pengaman agar tidak ada elemen yang bablas ke samping --}}
+<body class="h-full overflow-x-hidden bg-white text-primary-900 antialiased">
 @php
     $panelRoute = null;
     if (auth()->check()) {
         $u = auth()->user();
         $panelRoute = match (true) {
-            $u->hasAnyRole(['super_admin', 'admin'])                                   => route('admin.dashboard'),
-            $u->hasRole('admin_dinas')                                                 => route('dinas.dashboard'),
-            $u->hasAnyRole(['bupati', 'camat', 'lurah', 'kepala_dinas_banjar'])         => route('eksekutif.dashboard'),
-            $u->hasRole('admin_tps')                                                    => route('tps.dashboard'),
-            $u->hasAnyRole(['admin_bank_sampah', 'petugas_bank_sampah'])                => route('bank-sampah.dashboard'),
-            $u->hasRole('umkm')                                                         => route('umkm.dashboard'),
-            $u->hasRole('petugas_lapangan')                                             => route('petugas.dashboard'),
-            default                                                                     => null,
+            $u->hasAnyRole(['super_admin', 'admin'])                            => route('admin.dashboard'),
+            $u->hasRole('admin_dinas')                                          => route('dinas.dashboard'),
+            $u->hasAnyRole(['bupati', 'camat', 'lurah', 'kepala_dinas_banjar'])  => route('eksekutif.dashboard'),
+            $u->hasRole('admin_tps')                                            => route('tps.dashboard'),
+            $u->hasAnyRole(['admin_bank_sampah', 'petugas_bank_sampah'])         => route('bank-sampah.dashboard'),
+            $u->hasRole('umkm')                                                  => route('umkm.dashboard'),
+            $u->hasRole('petugas_lapangan')                                      => route('petugas.dashboard'),
+            default                                                              => null,
         };
     }
     $navLinks = [
@@ -48,21 +49,24 @@
      x-init="scrolled = window.scrollY > 10;
              window.addEventListener('scroll', () => { scrolled = window.scrollY > 10 }, { passive: true });">
 
+    {{-- z-50 (bukan z-9999 — kelas itu tidak sah di Tailwind dan diabaikan) --}}
     <header
-        class="fixed inset-x-0 top-0 z-9999 transition-all duration-300"
+        class="fixed inset-x-0 top-0 z-50 transition-all duration-300"
         :class="(scrolled || open || {{ $isBeranda ? 'false' : 'true' }})
             ? 'border-b border-gray-200 bg-white/90 backdrop-blur'
             : 'border-b border-transparent bg-transparent'">
-        <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-            <a href="{{ route('beranda') }}" class="flex items-center gap-2.5">
-                <img src="{{ asset('images/logo-primary.png') }}" class="w-10" alt="Niti Resik">
-                <span class="text-lg font-bold text-primary tracking-tight">Niti Resik</span>
+        <div class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
+            <a href="{{ route('beranda') }}" class="flex min-w-0 items-center gap-2.5">
+                <img src="{{ asset('images/logo-primary.png') }}" class="w-10 shrink-0" alt="Niti Resik">
+                <span class="truncate text-lg font-bold tracking-tight text-primary">Niti Resik</span>
             </a>
+
             <nav class="hidden items-center gap-1 md:flex">
                 @foreach ($navLinks as [$label, $url, $isActive])
                     <a href="{{ $url }}" class="rounded-lg px-3 py-2 text-sm font-medium {{ $isActive ? 'text-primary-700' : 'text-gray-600 hover:text-primary-900' }}">{{ $label }}</a>
                 @endforeach
             </nav>
+
             <div class="hidden items-center gap-2 md:flex">
                 @auth
                     @if ($panelRoute)
@@ -76,11 +80,35 @@
                     <a href="/login" class="rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">Masuk</a>
                 @endauth
             </div>
-            <button @click="open = !open" class="md:hidden rounded-lg p-2 text-gray-600 hover:bg-gray-100" aria-label="Menu">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+
+            {{-- ===== Tombol menu: hamburger → X, beranimasi ===== --}}
+            <button @click="open = !open"
+                    :aria-expanded="open"
+                    aria-label="Menu"
+                    class="shrink-0 rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 md:hidden">
+                <span class="relative block h-4 w-6">
+                    {{-- garis atas --}}
+                    <span class="absolute left-0 top-1/2 -mt-px block h-0.5 w-6 rounded-full bg-current transition-transform duration-300 ease-in-out motion-reduce:transition-none"
+                          :class="open ? 'rotate-45' : '-translate-y-1.5'"></span>
+                    {{-- garis tengah (lenyap lebih cepat agar tidak menumpuk) --}}
+                    <span class="absolute left-0 top-1/2 -mt-px block h-0.5 w-6 rounded-full bg-current transition-all duration-200 ease-in-out motion-reduce:transition-none"
+                          :class="open ? 'scale-x-0 opacity-0' : 'scale-x-100 opacity-100'"></span>
+                    {{-- garis bawah --}}
+                    <span class="absolute left-0 top-1/2 -mt-px block h-0.5 w-6 rounded-full bg-current transition-transform duration-300 ease-in-out motion-reduce:transition-none"
+                          :class="open ? '-rotate-45' : 'translate-y-1.5'"></span>
+                </span>
             </button>
         </div>
-        <div x-show="open" x-cloak x-transition class="border-t border-gray-200 bg-white md:hidden">
+
+        {{-- ===== Panel menu mobile ===== --}}
+        <div x-show="open" x-cloak
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-2"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 -translate-y-2"
+             class="border-t border-gray-200 bg-white md:hidden">
             <div class="space-y-1 px-4 py-3">
                 @foreach ($navLinks as [$label, $url, $isActive])
                     <a href="{{ $url }}" class="block rounded-lg px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50' }}">{{ $label }}</a>
@@ -106,8 +134,8 @@
         <div class="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
             <div class="lg:col-span-2">
                 <div class="flex items-center gap-2.5">
-                    <img src="{{ asset('images/logo-primary.png') }}" class="w-10" alt="Niti Resik">
-                    <span class="text-lg font-bold text-primary tracking-tight">Niti Resik</span>
+                    <img src="{{ asset('images/logo-primary.png') }}" class="w-10 shrink-0" alt="Niti Resik">
+                    <span class="text-lg font-bold tracking-tight text-primary">Niti Resik</span>
                 </div>
                 <p class="mt-3 max-w-sm text-sm text-gray-500">Ekonomi sirkular pengelolaan sampah dari warga, bank sampah, hingga UMKM daur ulang dalam satu ekosistem.</p>
             </div>
@@ -125,7 +153,7 @@
                 <p class="mt-3 text-sm text-gray-500">Untuk masyarakat</p>
                 <div class="mt-3 flex flex-col gap-2">
                     <a href="#unduh" class="inline-flex items-center gap-2 rounded-lg bg-primary-900 px-3 py-2 text-xs font-semibold text-white hover:bg-primary-700">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5V3.5c0-.6.3-1 .8-1.3L13 12 3.8 21.8c-.5-.3-.8-.7-.8-1.3Zm12.5-7L6 3.9l11.6 6.6-2.1 3Zm3.7 2.1-2.6-1.5-2.3 2.3 2.3 2.3 2.6-1.5c.7-.4.7-1.5 0-1.9ZM6 20.1l9.5-9.5 2.1 3L6 20.1Z"/></svg>
+                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5V3.5c0-.6.3-1 .8-1.3L13 12 3.8 21.8c-.5-.3-.8-.7-.8-1.3Zm12.5-7L6 3.9l11.6 6.6-2.1 3Zm3.7 2.1-2.6-1.5-2.3 2.3 2.3 2.3 2.6-1.5c.7-.4.7-1.5 0-1.9ZM6 20.1l9.5-9.5 2.1 3L6 20.1Z"/></svg>
                         Unduh Aplikasi
                     </a>
                 </div>
