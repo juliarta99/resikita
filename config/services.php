@@ -37,29 +37,29 @@ return [
 
     'fonnte' => [
         'token' => env('FONNTE_TOKEN'),
-        'url'   => 'https://api.fonnte.com/send',
+        'url' => 'https://api.fonnte.com/send',
     ],
 
     'gemini' => [
-        'key'   => env('GEMINI_API_KEY'),
+        'key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_MODEL', 'gemini-3.1-flash-lite'),
-        'url'   => 'https://generativelanguage.googleapis.com/v1beta',
+        'url' => 'https://generativelanguage.googleapis.com/v1beta',
     ],
 
     'midtrans' => [
-        'server_key'    => env('MIDTRANS_SERVER_KEY'),
-        'client_key'    => env('MIDTRANS_CLIENT_KEY'),
+        'server_key' => env('MIDTRANS_SERVER_KEY'),
+        'client_key' => env('MIDTRANS_CLIENT_KEY'),
         'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
     ],
 
     'rajaongkir' => [
-        'base_url'  => env('RAJAONGKIR_BASE_URL', 'https://rajaongkir.komerce.id/api/v1'),
-        'key'       => env('RAJAONGKIR_API_KEY'),
+        'base_url' => env('RAJAONGKIR_BASE_URL', 'https://rajaongkir.komerce.id/api/v1'),
+        'key' => env('RAJAONGKIR_API_KEY'),
         'origin_id' => env('RAJAONGKIR_ORIGIN_ID'),
     ],
 
     'whatsapp' => [
-        'driver'       => env('WHATSAPP_DRIVER', 'log'),
+        'driver' => env('WHATSAPP_DRIVER', 'log'),
         'fonnte_token' => env('FONNTE_TOKEN'),
     ],
 ];

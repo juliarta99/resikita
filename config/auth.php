@@ -37,9 +37,27 @@ return [
     |
     */
 
+    /*
+    | Dua kanal, dua mekanisme (CLAUDE.md 5):
+    |
+    |   web    , sesi + cookie untuk antarmuka Livewire
+    |   sanctum, token Bearer untuk aplikasi mobile
+    |
+    | Keduanya memakai provider `users` yang sama, sehingga role Spatie
+    | cukup disemai sekali pada guard `web` dan tetap berlaku untuk
+    | permintaan yang diautentikasi lewat token.
+    |
+    | Sanctum di sini dipakai sebagai token murni. Jangan mengaktifkan
+    | SPA mode, lihat CLAUDE.md 13.
+    */
     'guards' => [
         'web' => [
             'driver' => 'session',
+            'provider' => 'users',
+        ],
+
+        'sanctum' => [
+            'driver' => 'sanctum',
             'provider' => 'users',
         ],
     ],

@@ -1,48 +1,63 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\BankSampah;
 
-use App\Models\BankSampah;
-use App\Models\User;
-use App\Models\WasteDeposit;
-use Illuminate\Support\Facades\Auth;
-use Livewire\Attributes\Layout;
+use App\Enums\StatusSetoran;
+use App\Models\SetoranSampah;
+use App\Services\Wallet\SetoranService;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Layout('components.layouts.banksampah')]
+/**
+ * Dasbor pengelola bank sampah.
+ *
+ * Menampilkan rekap volume dan nilai unit ini saja. Seluruh query
+ * dikunci pada `users.bank_sampah_id`, satu unit tidak pernah melihat
+ * transaksi unit lain, termasuk yang berada di desa yang sama.
+ */
+#[Title('Dasbor Bank Sampah')]
 class Dashboard extends Component
 {
-    public function render()
+    public int $rentang = 30;
+
+    public function ubahRentang(int $hari): void
     {
-        $bsId = Auth::user()->bank_sampah_id;
-        $bs = BankSampah::find($bsId);
+        $this->rentang = in_array($hari, [7, 30, 90, 365], true) ? $hari : 30;
+    }
 
-        $today = WasteDeposit::where('bank_sampah_id', $bsId)->whereDate('created_at', today());
-        $month = WasteDeposit::where('bank_sampah_id', $bsId)
-            ->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
+    public function render(SetoranService $setoran)
+    {
+        $bankSampah = auth()->user()->bankSampah;
 
-        // Tren 7 hari terakhir
-        $trenLabels = [];
-        $trenData = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $d = now()->subDays($i);
-            $trenLabels[] = $d->format('d M');
-            $trenData[] = (float) WasteDeposit::where('bank_sampah_id', $bsId)
-                ->whereDate('created_at', $d->toDateString())
-                ->sum('total_nilai');
+        if ($bankSampah === null) {
+            return view('livewire.bank-sampah.dashboard', ['bankSampah' => null]);
         }
 
+        $sejak = now()->subDays($this->rentang)->toDateTimeString();
+
         return view('livewire.bank-sampah.dashboard', [
-            'bs'           => $bs,
-            'todayCount'   => (clone $today)->count(),
-            'todayNilai'   => (float) (clone $today)->sum('total_nilai'),
-            'monthNilai'   => (float) (clone $month)->sum('total_nilai'),
-            'monthBerat'   => (float) (clone $month)->sum('total_berat'),
-            'nasabahCount' => WasteDeposit::where('bank_sampah_id', $bsId)->distinct('nasabah_id')->count('nasabah_id'),
-            'petugasCount' => User::role('petugas_bank_sampah')->where('bank_sampah_id', $bsId)->count(),
-            'recent'       => WasteDeposit::with('nasabah', 'petugas')->where('bank_sampah_id', $bsId)->latest()->take(8)->get(),
-            'trenLabels'   => $trenLabels,
-            'trenData'     => $trenData,
+            'bankSampah' => $bankSampah,
+            'rekap' => $setoran->rekap($bankSampah, $sejak),
+            'rekapTotal' => $setoran->rekap($bankSampah),
+
+            'sedangProses' => SetoranSampah::query()
+                ->where('bank_sampah_id', $bankSampah->id)
+                ->where('status', StatusSetoran::Proses)
+                ->with('nasabah:id,name')
+                ->latest('id')
+                ->get(),
+
+            'terakhir' => SetoranSampah::query()
+                ->where('bank_sampah_id', $bankSampah->id)
+                ->where('status', StatusSetoran::Selesai)
+                ->with('nasabah:id,name')
+                ->latest('id')
+                ->limit(8)
+                ->get(),
+
+            'jumlahHarga' => $bankSampah->harga()->aktif()->count(),
         ]);
     }
 }

@@ -1,11 +1,14 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/blank-livewire-starter-kit",
+    "name": "resikita/resikita",
     "type": "project",
-    "description": "The official Laravel starter kit for Livewire.",
+    "description": "Resikita, platform ekonomi sirkular pengelolaan sampah skala nasional (web Livewire + API mobile).",
     "keywords": [
+        "resikita",
+        "persampahan",
+        "ekonomi-sirkular",
         "laravel",
-        "framework"
+        "livewire"
     ],
     "license": "MIT",
     "require": {

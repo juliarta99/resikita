@@ -1,180 +1,120 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Admin;
 
-use App\Models\BanjarDinas;
-use App\Models\Order;
+use App\Enums\StatusUmkm;
+use App\Livewire\Concerns\MemberiUmpanBalik;
 use App\Models\Umkm;
-use App\Models\User;
-use App\Services\Domain\AccountProvisioningService;
-use Illuminate\Validation\Rule;
-use Livewire\Attributes\Layout;
+use App\Services\Auth\AkunService;
+use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
+use Livewire\WithPagination;
 
-#[Layout('components.layouts.app')]
+/**
+ * Verifikasi UMKM sebelum boleh berjualan.
+ *
+ * Marketplace yang bisa diisi penjual mana pun tanpa peninjauan adalah
+ * masalah perlindungan konsumen, bukan sekadar kualitas data. Sampai
+ * disetujui, toko berstatus menunggu dan panel penjualnya tertutup,
+ * yang tertutup tokonya, bukan akun pemiliknya.
+ *
+ * Penolakan wajib membawa alasan, dan alasan itu dibaca langsung oleh
+ * pemilik usaha di halaman status pendaftarannya. Karena itu tulisannya
+ * ditujukan kepadanya, bukan catatan internal antar-admin.
+ */
+#[Title('Manajemen UMKM')]
 class UmkmManager extends Component
 {
-    public bool $showForm = false;
-    public bool $showDelete = false;
-    public bool $showReject = false;
-    public ?int $deleteId = null;
-    public ?int $rejectId = null;
+    use MemberiUmpanBalik;
+    use WithPagination;
 
-    public ?int $editingId = null;
-    public ?int $officialId = null;
+    #[Url(as: 'status', except: 'menunggu')]
+    public string $status = 'menunggu';
 
-    public string $nama = '';
-    public string $banjar_id = '';
-    public string $deskripsi = '';
-    public string $alamat = '';
-    public string $no_hp = '';
-    public string $lat = '';
-    public string $lng = '';
+    #[Url(as: 'q', except: '')]
+    public string $cari = '';
 
-    public string $admin_name = '';
-    public string $admin_email = '';
-    public string $admin_password = '';
+    public ?int $tolakId = null;
 
-    protected function rules(): array
+    public string $catatanTolak = '';
+
+    public function updated(string $properti): void
     {
-        return [
-            'nama'           => 'required|string|max:255',
-            'banjar_id'      => 'required|exists:banjar_dinas,id',
-            'deskripsi'      => 'nullable|string|max:1000',
-            'alamat'         => 'nullable|string|max:255',
-            'no_hp'          => 'nullable|string|max:30',
-            'lat'            => 'nullable|numeric|between:-90,90',
-            'lng'            => 'nullable|numeric|between:-180,180',
-            'admin_name'     => 'required|string|max:255',
-            'admin_email'    => ['required', 'email', Rule::unique('users', 'email')->ignore($this->officialId)],
-            'admin_password' => [$this->editingId ? 'nullable' : 'required', 'string', 'min:8'],
-        ];
-    }
-
-    public function tambah()
-    {
-        $this->batal();
-        $this->showForm = true;
-        $this->dispatch('form-opened', lat: null, lng: null);
-    }
-
-    public function simpan(AccountProvisioningService $provisioning)
-    {
-        $data = $this->validate();
-
-        $attrs = [
-            'nama'      => $data['nama'],
-            'banjar_id' => $data['banjar_id'],
-            'deskripsi' => $data['deskripsi'] ?? null,
-            'alamat'    => $data['alamat'] ?? null,
-            'no_hp'     => $data['no_hp'] ?? null,
-            'lat'       => $data['lat'] ?: null,
-            'lng'       => $data['lng'] ?: null,
-        ];
-
-        $payload = [
-            'name'     => $data['admin_name'],
-            'email'    => $data['admin_email'],
-            'password' => $data['admin_password'] ?: null,
-        ];
-
-        if ($this->editingId) {
-            Umkm::findOrFail($this->editingId)->update($attrs);
-            $provisioning->updateAccount(User::findOrFail($this->officialId), $payload);
-            $pesan = 'UMKM diperbarui.';
-        } else {
-            $umkm = Umkm::create($attrs + ['status' => 'aktif']);
-            $provisioning->createAdminUmkm($umkm, $payload);
-            $pesan = 'UMKM dan akun Admin UMKM berhasil dibuat.';
+        if (! in_array($properti, ['page', 'tolakId', 'catatanTolak'], true)) {
+            $this->resetPage();
         }
-
-        $this->batal();
-        session()->flash('ok', $pesan);
     }
 
-    public function edit(int $id)
+    public function setujui(int $id, AkunService $akun): void
     {
         $umkm = Umkm::findOrFail($id);
-        $admin = User::role('umkm')->where('umkm_id', $umkm->id)->first();
 
-        $this->editingId = $umkm->id;
-        $this->nama = $umkm->nama;
-        $this->banjar_id = (string) $umkm->banjar_id;
-        $this->deskripsi = $umkm->deskripsi ?? '';
-        $this->alamat = $umkm->alamat ?? '';
-        $this->no_hp = $umkm->no_hp ?? '';
-        $this->lat = $umkm->lat ? (string) $umkm->lat : '';
-        $this->lng = $umkm->lng ? (string) $umkm->lng : '';
-        $this->officialId = $admin?->id;
-        $this->admin_name = $admin?->name ?? '';
-        $this->admin_email = $admin?->email ?? '';
-        $this->admin_password = '';
-
-        $this->showForm = true;
-        $this->dispatch('form-opened', lat: $this->lat ?: null, lng: $this->lng ?: null);
+        $this->jalankan(
+            fn () => $akun->setujuiUmkm($umkm, auth()->user()),
+            "{$umkm->nama} disetujui. Produknya kini bisa tampil di marketplace.",
+        );
     }
 
-    public function konfirmHapus(int $id)
+    public function bukaFormTolak(int $id): void
     {
-        $this->deleteId = $id;
-        $this->showDelete = true;
+        $this->resetValidation();
+        $this->tolakId = $id;
+        $this->catatanTolak = '';
     }
 
-    public function hapus()
+    public function batalTolak(): void
     {
-        $id = $this->deleteId;
-        $this->showDelete = false;
+        $this->reset(['tolakId', 'catatanTolak']);
+        $this->resetValidation();
+    }
 
-        if (! $id) {
-            return;
+    public function tolak(AkunService $akun): void
+    {
+        $umkm = Umkm::findOrFail($this->tolakId);
+
+        $this->validate(
+            ['catatanTolak' => ['required', 'string', 'min:10', 'max:1000']],
+            [
+                'catatanTolak.required' => 'Alasan penolakan wajib diisi.',
+                'catatanTolak.min' => 'Jelaskan alasannya minimal 10 karakter, pemilik usaha membacanya.',
+            ],
+        );
+
+        $hasil = $this->jalankan(
+            fn () => $akun->tolakUmkm($umkm, auth()->user(), $this->catatanTolak),
+            "{$umkm->nama} ditolak. Pemiliknya bisa membaca alasannya dan mengajukan ulang.",
+        );
+
+        if ($hasil !== null) {
+            $this->reset(['tolakId', 'catatanTolak']);
         }
-
-        if (Order::where('umkm_id', $id)->exists()) {
-            session()->flash('err', 'Tidak bisa dihapus: UMKM ini sudah memiliki pesanan.');
-            return;
-        }
-
-        User::where('umkm_id', $id)->delete();
-        Umkm::findOrFail($id)->delete();
-
-        $this->deleteId = null;
-        session()->flash('ok', 'UMKM dihapus.');
-    }
-
-    public function setujui(int $id, AccountProvisioningService $provisioning)
-    {
-        $provisioning->approveUmkm(Umkm::findOrFail($id));
-        session()->flash('ok', 'Pendaftaran UMKM disetujui.');
-    }
-
-    public function konfirmTolak(int $id)
-    {
-        $this->rejectId = $id;
-        $this->showReject = true;
-    }
-
-    public function tolak(AccountProvisioningService $provisioning)
-    {
-        $this->showReject = false;
-
-        if ($this->rejectId) {
-            $provisioning->rejectUmkm(Umkm::findOrFail($this->rejectId));
-            $this->rejectId = null;
-            session()->flash('ok', 'Pendaftaran UMKM ditolak.');
-        }
-    }
-
-    public function batal()
-    {
-        $this->reset('showForm', 'editingId', 'officialId', 'nama', 'banjar_id', 'deskripsi', 'alamat', 'no_hp', 'lat', 'lng', 'admin_name', 'admin_email', 'admin_password');
     }
 
     public function render()
     {
+        $query = Umkm::query()
+            ->with(['wilayah:id,nama,tingkat', 'peninjau:id,name'])
+            ->withCount('produk')
+            ->latest('id');
+
+        if ($this->status !== '') {
+            $query->where('status', $this->status);
+        }
+
+        if (trim($this->cari) !== '') {
+            $kata = trim($this->cari);
+            $query->where(fn ($q) => $q
+                ->where('nama', 'like', "%{$kata}%")
+                ->orWhere('email', 'like', "%{$kata}%"));
+        }
+
         return view('livewire.admin.umkm-manager', [
-            'banjarList' => BanjarDinas::with('kelurahan.kecamatan')->orderBy('nama')->get(),
-            'pending'    => Umkm::where('status', 'menunggu')->with('admins')->latest()->get(),
-            'daftar'     => Umkm::whereIn('status', ['aktif', 'ditolak'])->latest()->get(),
+            'daftar' => $query->paginate(12),
+            'statusTersedia' => StatusUmkm::options(),
+            'jumlahMenunggu' => Umkm::query()->where('status', StatusUmkm::Menunggu)->count(),
         ]);
     }
 }

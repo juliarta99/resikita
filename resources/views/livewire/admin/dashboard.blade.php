@@ -1,80 +1,141 @@
-<div class="mx-auto max-w-6xl space-y-6">
-    <div>
-        <h1 class="text-2xl font-semibold text-primary-900">Dashboard</h1>
-        <p class="mt-1 text-sm text-gray-500">Ringkasan menyeluruh ekosistem Niti Resik Kabupaten Badung.</p>
+@php $isSuperAdmin = auth()->user()->hasRole(\App\Enums\Role::SuperAdmin->value); @endphp
+
+<div>
+    <x-ui.kepala-halaman
+        judul="Dasbor platform"
+        keterangan="Kesehatan Resikita secara keseluruhan dan antrean yang menunggu keputusan Anda."/>
+
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <x-ui.statistik label="Pengguna terdaftar" :nilai="number_format($totalPengguna)"
+                        ikon="orang" warna="biru"
+                        keterangan="+{{ number_format($penggunaBaruBulanIni) }} bulan ini"/>
+
+        <x-ui.statistik label="Total laporan" :nilai="number_format($totalLaporan)"
+                        ikon="megafon" warna="primary"
+                        keterangan="{{ number_format($laporanAktif) }} masih berjalan"/>
+
+        <x-ui.statistik label="Wilayah bergabung" :nilai="number_format($wilayahTerverifikasi)"
+                        ikon="peta" warna="kuning"
+                        keterangan="{{ number_format($wilayahMenunggu) }} wilayah punya laporan tapi belum bergabung"/>
+
+        <x-ui.statistik label="Pemakaian fitur suara" :nilai="$fiturSuara['persen_laporan_suara']"
+                        satuan="%" ikon="suara" warna="abu"
+                        keterangan="{{ number_format($fiturSuara['artikel_didengarkan']) }} artikel didengarkan"/>
     </div>
 
-    {{-- Perlu tindakan --}}
-    <div class="grid gap-4 sm:grid-cols-3">
-        <a href="{{ route('admin.umkm') }}" class="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-5 hover:bg-amber-100/60">
-            <div><p class="text-xs text-amber-700/80">UMKM Menunggu Persetujuan</p><p class="mt-1 text-2xl font-semibold text-amber-700">{{ $perluTindakan['umkmMenunggu'] }}</p></div>
-            <span class="text-amber-600">→</span>
-        </a>
-        <a href="{{ route('admin.penarikan') }}" class="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 p-5 hover:bg-blue-100/60">
-            <div><p class="text-xs text-blue-700/80">Penarikan Menunggu</p><p class="mt-1 text-2xl font-semibold text-blue-700">{{ $perluTindakan['penarikanMenunggu'] }}</p></div>
-            <span class="text-blue-600">→</span>
-        </a>
-        <a href="{{ route('admin.laporan') }}" class="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-5 hover:bg-red-100/60">
-            <div><p class="text-xs text-red-700/80">Laporan Menunggu</p><p class="mt-1 text-2xl font-semibold text-red-600">{{ $perluTindakan['laporanMenunggu'] }}</p></div>
-            <span class="text-red-600">→</span>
-        </a>
-    </div>
+    {{-- Antrean persetujuan --}}
+    <x-ui.kartu class="mt-6" judul="Menunggu keputusan Anda"
+                keterangan="Antrean yang menahan orang lain sampai Anda memutuskan.">
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            @php
+                $antrean = array_filter([
+                    $isSuperAdmin ? [
+                        'label' => 'Pengajuan wilayah',
+                        'jumlah' => $pengajuanMenunggu,
+                        'route' => 'admin.pengajuan-wilayah',
+                        'ikon' => 'peta',
+                    ] : null,
+                    [
+                        'label' => 'Verifikasi UMKM',
+                        'jumlah' => $umkmMenunggu,
+                        'route' => 'admin.umkm',
+                        'ikon' => 'toko',
+                    ],
+                    [
+                        'label' => 'Penarikan warga',
+                        'jumlah' => $penarikanMenunggu,
+                        'route' => 'admin.penarikan',
+                        'ikon' => 'dompet',
+                    ],
+                    [
+                        'label' => 'Penarikan UMKM',
+                        'jumlah' => $penarikanUmkmMenunggu,
+                        'route' => 'admin.penarikan',
+                        'ikon' => 'dompet',
+                    ],
+                ]);
+            @endphp
 
-    {{-- Statistik --}}
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        @foreach ([
-            ['Total Pengguna', number_format($stat['pengguna'], 0, ',', '.')],
-            ['Masyarakat', number_format($stat['masyarakat'], 0, ',', '.')],
-            ['Kecamatan', $stat['kecamatan']],
-            ['Banjar Dinas', $stat['banjar']],
-            ['TPS', $stat['tps']],
-            ['Bank Sampah', $stat['bankSampah']],
-            ['UMKM Aktif', $stat['umkm']],
-            ['Setoran Bulan Ini', 'Rp ' . number_format($stat['setoranBln'], 0, ',', '.')],
-        ] as [$label, $val])
-            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                <p class="text-xs text-gray-400">{{ $label }}</p>
-                <p class="mt-1 text-xl font-semibold text-primary-900">{{ $val }}</p>
-            </div>
-        @endforeach
-    </div>
-
-    {{-- Chart --}}
-    <div class="grid gap-4 lg:grid-cols-3">
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2">
-            <p class="text-sm font-semibold text-primary-900">Tren Setoran 6 Bulan (Rp)</p>
-            <div wire:ignore class="mt-3 h-64" x-data x-init="
-                new Chart($refs.bar, { type:'bar', data:{ labels:@js($trenLabels), datasets:[{ label:'Setoran', data:@js($trenData), backgroundColor:'#057D5D', borderRadius:6 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true } } } });
-            "><canvas x-ref="bar"></canvas></div>
+            @foreach ($antrean as $item)
+                <a href="{{ route($item['route']) }}" wire:navigate
+                   class="flex items-center gap-3 rounded-xl border p-4 transition
+                          {{ $item['jumlah'] > 0
+                              ? 'border-amber-200 bg-amber-50 hover:bg-amber-100'
+                              : 'border-gray-200 hover:bg-gray-50' }}">
+                    <span class="flex h-10 w-10 flex-none items-center justify-center rounded-xl
+                                 {{ $item['jumlah'] > 0 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-400' }}">
+                        <x-ui.ikon :nama="$item['ikon']"/>
+                    </span>
+                    <span class="min-w-0">
+                        <span class="block text-xl font-bold text-primary-900">{{ number_format($item['jumlah']) }}</span>
+                        <span class="block truncate text-xs text-gray-600">{{ $item['label'] }}</span>
+                    </span>
+                </a>
+            @endforeach
         </div>
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <p class="text-sm font-semibold text-primary-900">Status Laporan</p>
-            <div wire:ignore class="mt-3 h-64" x-data x-init="
-                new Chart($refs.doughnut, { type:'doughnut', data:{ labels:['Menunggu','Proses','Selesai','Ditolak'], datasets:[{ data:@js($lapData), backgroundColor:['#f59e0b','#3b82f6','#057D5D','#ef4444'] }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' } } } });
-            "><canvas x-ref="doughnut"></canvas></div>
-        </div>
-    </div>
+    </x-ui.kartu>
 
-    {{-- Peta --}}
-    <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <p class="text-sm font-semibold text-primary-900">Peta Sebaran</p>
-            <div class="flex flex-wrap gap-4 text-xs text-gray-500">
-                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#0ea5e9"></span> TPS</span>
-                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#057D5D"></span> Bank Sampah</span>
-                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#f59e0b"></span> UMKM</span>
-                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#ef4444"></span> Laporan</span>
-            </div>
-        </div>
-        <div wire:ignore class="mt-3" x-data x-init="
-            const pin = (c) => L.divIcon({ className:'', iconSize:[26,36], iconAnchor:[13,36], popupAnchor:[0,-32], html:`<svg width='26' height='36' viewBox='0 0 26 36' xmlns='http://www.w3.org/2000/svg'><path d='M13 0C5.8 0 0 5.8 0 13c0 9.2 13 23 13 23s13-13.8 13-23C26 5.8 20.2 0 13 0z' fill='${c}'/><circle cx='13' cy='13' r='5' fill='white'/></svg>` });
-            const map = L.map($refs.map).setView([-8.6478,115.1385], 11);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(map);
-            const colors = { tps:'#0ea5e9', bank_sampah:'#057D5D', umkm:'#f59e0b', laporan:'#ef4444' };
-            const data = @js($markers); const pts=[];
-            data.forEach(m => { L.marker([m.lat,m.lng],{icon:pin(colors[m.t]||'#666')}).bindPopup(m.n).addTo(map); pts.push([m.lat,m.lng]); });
-            if (pts.length) map.fitBounds(pts,{padding:[30,30],maxZoom:13});
-            setTimeout(()=>map.invalidateSize(),200);
-        "><div x-ref="map" class="h-96 w-full rounded-lg border border-gray-200"></div></div>
+    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+
+        {{-- Laporan terbaru --}}
+        <x-ui.kartu padat class="lg:col-span-2" judul="Laporan terbaru"
+                    keterangan="Seluruh laporan yang masuk ke sistem, lintas wilayah.">
+            <x-slot:aksi>
+                <x-ui.tombol jenis="kedua" ukuran="kecil" :tautan="route('admin.laporan')">
+                    Moderasi laporan
+                </x-ui.tombol>
+            </x-slot:aksi>
+
+            @if ($laporanTerbaru->isEmpty())
+                <x-ui.kosong ikon="megafon" judul="Belum ada laporan"
+                             pesan="Laporan pertama dari warga akan tampil di sini."/>
+            @else
+                <ul class="divide-y divide-gray-100">
+                    @foreach ($laporanTerbaru as $laporan)
+                        <li class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-medium text-primary-900">{{ $laporan->judul }}</p>
+                                <p class="truncate text-xs text-gray-500">
+                                    {{ $laporan->tiket }}
+                                    @if ($laporan->kabupaten) &middot; {{ $laporan->kabupaten->nama }} @endif
+                                    &middot; {{ $laporan->created_at->diffForHumans(short: true) }}
+                                </p>
+                            </div>
+                            <x-ui.lencana :status="$laporan->status"/>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </x-ui.kartu>
+
+        {{-- Fitur suara --}}
+        <x-ui.kartu judul="Jejak fitur suara"
+                    keterangan="Angka yang mengubah klaim inklusivitas menjadi sesuatu yang bisa ditunjukkan.">
+            <dl class="space-y-4">
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Laporan didiktekan</dt>
+                    <dd class="mt-1 text-2xl font-bold text-primary-900">
+                        {{ number_format($fiturSuara['laporan_suara']) }}
+                        <span class="text-sm font-medium text-gray-500">
+                            dari {{ number_format($fiturSuara['laporan_total']) }}
+                        </span>
+                    </dd>
+                    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100">
+                        <div class="h-full rounded-full bg-primary-500"
+                             style="width: {{ min(100, $fiturSuara['persen_laporan_suara']) }}%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Artikel didengarkan</dt>
+                    <dd class="mt-1 text-2xl font-bold text-primary-900">
+                        {{ number_format($fiturSuara['artikel_didengarkan']) }}
+                    </dd>
+                    <dd class="text-xs text-gray-500">
+                        dibanding {{ number_format($fiturSuara['artikel_dilihat']) }} kali dibaca
+                    </dd>
+                </div>
+            </dl>
+        </x-ui.kartu>
     </div>
 </div>

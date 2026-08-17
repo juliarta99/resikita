@@ -20,8 +20,7 @@ class TableExport
         private array $headings,
         private array $rows,
         private string $title = 'Sheet1',
-    ) {
-    }
+    ) {}
 
     private function esc($v): string
     {
@@ -31,25 +30,25 @@ class TableExport
     private function cell($v): string
     {
         if (is_int($v) || is_float($v)) {
-            return '<Cell><Data ss:Type="Number">' . $v . '</Data></Cell>';
+            return '<Cell><Data ss:Type="Number">'.$v.'</Data></Cell>';
         }
 
-        return '<Cell><Data ss:Type="String">' . $this->esc($v) . '</Data></Cell>';
+        return '<Cell><Data ss:Type="String">'.$this->esc($v).'</Data></Cell>';
     }
 
     public function xml(): string
     {
         $sheet = $this->esc(substr($this->title, 0, 31));
 
-        $out = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        $out .= '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        $out = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+        $out .= '<?mso-application progid="Excel.Sheet"?>'."\n";
         $out .= '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
         $out .= '<Styles><Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#057D5D" ss:Pattern="Solid"/></Style></Styles>';
-        $out .= '<Worksheet ss:Name="' . $sheet . '"><Table>';
+        $out .= '<Worksheet ss:Name="'.$sheet.'"><Table>';
 
         $out .= '<Row>';
         foreach ($this->headings as $h) {
-            $out .= '<Cell ss:StyleID="hdr"><Data ss:Type="String">' . $this->esc($h) . '</Data></Cell>';
+            $out .= '<Cell ss:StyleID="hdr"><Data ss:Type="String">'.$this->esc($h).'</Data></Cell>';
         }
         $out .= '</Row>';
 
@@ -75,7 +74,7 @@ class TableExport
         $xml = $this->xml();
 
         return response()->streamDownload(
-            fn () => print($xml),
+            fn () => print ($xml),
             $filename,
             ['Content-Type' => 'application/vnd.ms-excel; charset=UTF-8'],
         );

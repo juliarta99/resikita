@@ -96,7 +96,7 @@ $scrollIntoViewJsSnippet = ($scrollTo !== false)
                                     <span wire:key="paginator-{{ $paginator->getPageName() }}-page{{ $page }}">
                                         @if ($page == $paginator->currentPage())
                                             {{-- Halaman aktif: latar primary, teks putih.
-                                                 Bawaan Livewire memakai bg-white/text-gray-500 —
+                                                 Bawaan Livewire memakai bg-white/text-gray-500,
                                                  sama persis dengan halaman lain, sehingga posisi
                                                  pengguna tidak terlihat sama sekali. --}}
                                             <span aria-current="page">
