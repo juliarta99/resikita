@@ -1,126 +1,129 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Admin;
 
-use App\Exceptions\InsufficientBalanceException;
-use App\Models\Withdrawal;
-use App\Services\Domain\WalletService;
-use Illuminate\Support\Facades\Auth;
-use Livewire\Attributes\Layout;
+use App\Enums\StatusPenarikan;
+use App\Livewire\Concerns\MemberiUmpanBalik;
+use App\Models\PenarikanSaldo;
+use App\Models\UmkmPenarikan;
+use App\Services\Wallet\PenarikanService;
+use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-#[Layout('components.layouts.app')]
+/**
+ * Persetujuan penarikan saldo, warga maupun UMKM.
+ *
+ * Digabung dalam satu halaman karena keputusannya identik: memeriksa
+ * rekening lalu menyetujui atau menolak. Memisahkannya menjadi dua menu
+ * hanya membuat admin harus memeriksa dua tempat untuk pekerjaan yang
+ * sama, dan salah satunya cepat atau lambat terlupakan.
+ *
+ * Saldo sudah dipotong sejak pengajuan dibuat. Penolakan karena itu
+ * mengembalikannya, dan pengembalian itu dilakukan PenarikanService,
+ * bukan di sini.
+ */
+#[Title('Penarikan Saldo')]
 class PenarikanManager extends Component
 {
+    use MemberiUmpanBalik;
     use WithPagination;
 
-    public string $statusFilter = 'menunggu';
+    #[Url(as: 'jenis', except: 'warga')]
+    public string $jenis = 'warga';
 
-    public bool $showApprove = false;
-    public ?int $approveId = null;
+    #[Url(as: 'status', except: 'menunggu')]
+    public string $status = 'menunggu';
 
-    public bool $showReject = false;
-    public ?int $rejectId = null;
-    public string $rejectCatatan = '';
+    public ?int $tolakId = null;
 
-    public bool $showFinish = false;
-    public ?int $finishId = null;
+    public string $alasanTolak = '';
 
-    public array $statusLabels = [
-        'menunggu'  => 'Menunggu',
-        'disetujui' => 'Disetujui',
-        'ditolak'   => 'Ditolak',
-        'selesai'   => 'Selesai',
-    ];
-
-    public function updatingStatusFilter()
+    public function updated(string $properti): void
     {
-        $this->resetPage();
+        if (in_array($properti, ['jenis', 'status'], true)) {
+            $this->reset(['tolakId', 'alasanTolak']);
+            $this->resetPage();
+        }
     }
 
-    public function konfirmSetujui(int $id)
+    public function setujui(int $id, PenarikanService $service): void
     {
-        $this->approveId = $id;
-        $this->showApprove = true;
+        $this->jalankan(function () use ($id, $service): void {
+            if ($this->jenis === 'umkm') {
+                $service->setujuiUmkm(UmkmPenarikan::findOrFail($id), auth()->user());
+            } else {
+                $service->setujui(PenarikanSaldo::findOrFail($id), auth()->user());
+            }
+        }, 'Penarikan disetujui. Tandai selesai setelah dana benar-benar ditransfer.');
     }
 
-    public function setujui(WalletService $wallet)
+    public function tandaiSelesai(int $id, PenarikanService $service): void
     {
-        $this->showApprove = false;
-        $w = Withdrawal::with('user')->find($this->approveId);
-        $this->approveId = null;
+        if ($this->jenis === 'umkm') {
+            // Alur UMKM berhenti di "disetujui"; tidak ada langkah
+            // terpisah untuk menandai transfer selesai.
+            $this->pesanGalat('Penarikan UMKM tidak punya langkah "selesai" terpisah.');
 
-        if (! $w || $w->status !== 'menunggu') {
             return;
         }
 
-        try {
-            $wallet->debit($w->user, (float) $w->jumlah, 'penarikan', $w, 'Penarikan saldo #' . $w->id);
-        } catch (InsufficientBalanceException $e) {
-            session()->flash('err', 'Saldo nasabah tidak mencukupi untuk penarikan ini.');
-            return;
-        }
-
-        $w->update([
-            'status'      => 'disetujui',
-            'approved_by' => Auth::id(),
-        ]);
-
-        session()->flash('ok', 'Penarikan disetujui dan saldo nasabah dipotong.');
+        $this->jalankan(
+            fn () => $service->tandaiSelesai(PenarikanSaldo::findOrFail($id)),
+            'Penarikan ditandai selesai.',
+        );
     }
 
-    public function konfirmTolak(int $id)
+    public function bukaFormTolak(int $id): void
     {
-        $this->rejectId = $id;
-        $this->rejectCatatan = '';
-        $this->showReject = true;
+        $this->resetValidation();
+        $this->tolakId = $id;
+        $this->alasanTolak = '';
     }
 
-    public function tolak()
+    public function tolak(PenarikanService $service): void
     {
-        $w = Withdrawal::find($this->rejectId);
+        $this->validate(
+            ['alasanTolak' => ['required', 'string', 'min:10', 'max:500']],
+            [
+                'alasanTolak.required' => 'Alasan penolakan wajib diisi.',
+                'alasanTolak.min' => 'Jelaskan alasannya minimal 10 karakter, pemohon membacanya.',
+            ],
+        );
 
-        if ($w && $w->status === 'menunggu') {
-            $w->update([
-                'status'      => 'ditolak',
-                'approved_by' => Auth::id(),
-                'catatan'     => $this->rejectCatatan ?: null,
-            ]);
-            session()->flash('ok', 'Penarikan ditolak.');
-        }
+        $hasil = $this->jalankan(function () use ($service): bool {
+            if ($this->jenis === 'umkm') {
+                $service->tolakUmkm(UmkmPenarikan::findOrFail($this->tolakId), auth()->user(), $this->alasanTolak);
+            } else {
+                $service->tolak(PenarikanSaldo::findOrFail($this->tolakId), auth()->user(), $this->alasanTolak);
+            }
 
-        $this->reset('showReject', 'rejectId', 'rejectCatatan');
-    }
+            return true;
+        }, 'Penarikan ditolak dan saldonya sudah dikembalikan.');
 
-    public function konfirmSelesai(int $id)
-    {
-        $this->finishId = $id;
-        $this->showFinish = true;
-    }
-
-    public function selesaikan()
-    {
-        $this->showFinish = false;
-        $w = Withdrawal::find($this->finishId);
-        $this->finishId = null;
-
-        if ($w && $w->status === 'disetujui') {
-            $w->update(['status' => 'selesai']);
-            session()->flash('ok', 'Penarikan ditandai selesai.');
+        if ($hasil !== null) {
+            $this->reset(['tolakId', 'alasanTolak']);
         }
     }
 
     public function render()
     {
-        $query = Withdrawal::with(['user.wallet', 'approver'])->latest();
+        $query = $this->jenis === 'umkm'
+            ? UmkmPenarikan::query()->with(['umkm:id,nama', 'penyetuju:id,name'])
+            : PenarikanSaldo::query()->with(['user:id,name,email', 'penyetuju:id,name']);
 
-        if ($this->statusFilter !== 'semua') {
-            $query->where('status', $this->statusFilter);
+        if ($this->status !== '') {
+            $query->where('status', $this->status);
         }
 
         return view('livewire.admin.penarikan-manager', [
-            'daftar' => $query->paginate(12),
+            'daftar' => $query->latest('id')->paginate(12),
+            'statusTersedia' => StatusPenarikan::options(),
+            'menungguWarga' => PenarikanSaldo::query()->where('status', StatusPenarikan::Menunggu)->count(),
+            'menungguUmkm' => UmkmPenarikan::query()->where('status', StatusPenarikan::Menunggu)->count(),
         ]);
     }
 }

@@ -1,70 +1,86 @@
 <?php
-// app/Services/Integration/FonnteService.php
+
+declare(strict_types=1);
 
 namespace App\Services\Integration;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Pengiriman pesan WhatsApp lewat Fonnte.
+ *
+ * Skema lama punya dua kelas yang melakukan hal sama, FonnteService dan
+ * WhatsappOtpService, dengan penanganan galat dan normalisasi nomor
+ * yang berbeda. Keduanya digabung di sini.
+ *
+ * Driver `log` dipakai di pengembangan dan pengujian supaya tidak ada
+ * pesan sungguhan terkirim ke nomor orang saat menjalankan seeder atau
+ * uji. Pengiriman nyata hanya terjadi kalau WHATSAPP_DRIVER=fonnte.
+ */
 class FonnteService
 {
     /**
-     * Kirim pesan WhatsApp lewat Fonnte.
+     * Kirim pesan. Mengembalikan rujukan pesan dari penyedia bila ada,
+     * untuk disimpan di `notifikasi.provider_ref` sebagai jejak.
      */
-    public function sendWa(string $phone, string $message): bool
+    public function kirim(string $phone, string $pesan): ?string
     {
-        $response = Http::withHeaders([
-            'Authorization' => config('services.fonnte.token'),
-        ])->asForm()->post(config('services.fonnte.url'), [
-            'target'  => $this->normalize($phone),
-            'message' => $message,
-        ]);
+        $tujuan = $this->normalisasiNomor($phone);
+
+        if ($this->driver() !== 'fonnte') {
+            Log::info('[WhatsApp:log] pesan tidak dikirim sungguhan', [
+                'tujuan' => $tujuan,
+                'pesan' => $pesan,
+            ]);
+
+            return 'log:'.substr(md5($tujuan.$pesan), 0, 12);
+        }
+
+        $response = Http::withHeaders(['Authorization' => (string) config('services.fonnte.token')])
+            ->asForm()
+            ->timeout(15)
+            ->post((string) config('services.fonnte.url'), [
+                'target' => $tujuan,
+                'message' => $pesan,
+            ]);
 
         if ($response->failed()) {
-            Log::error('Fonnte gagal kirim WA', [
-                'phone' => $phone,
-                'body'  => $response->body(),
+            Log::error('Fonnte gagal mengirim pesan', [
+                'tujuan' => $tujuan,
+                'status' => $response->status(),
+                'body' => $response->body(),
             ]);
-            return false;
+
+            return null;
         }
 
-        return true;
+        return $response->json('id.0') ?? $response->json('id');
     }
 
     /**
-     * Kirim OTP verifikasi pendaftaran.
+     * Ubah 081234567890 menjadi 6281234567890.
+     *
+     * Fonnte menolak nomor berformat lokal, dan pengguna Indonesia
+     * hampir selalu mengetik dengan awalan 0.
      */
-    public function sendOtp(string $phone, string $code): bool
+    public function normalisasiNomor(string $phone): string
     {
-        $message = "Kode verifikasi Niti Resik Anda: {$code}\n"
-            . "Berlaku 5 menit. Jangan bagikan kode ini ke siapa pun.";
+        $angka = preg_replace('/\D/', '', $phone) ?? '';
 
-        return $this->sendWa($phone, $message);
-    }
-
-    /**
-     * Notifikasi progress laporan ke pelapor.
-     */
-    public function sendProgressUpdate(string $phone, string $tiket, string $status): bool
-    {
-        $message = "Update laporan Niti Resik ({$tiket}):\n"
-            . "Status: {$status}\n"
-            . "Cek detailnya di aplikasi. Terima kasih.";
-
-        return $this->sendWa($phone, $message);
-    }
-
-    /**
-     * 081234567890 -> 6281234567890
-     */
-    private function normalize(string $phone): string
-    {
-        $phone = preg_replace('/[^0-9]/', '', $phone);
-
-        if (str_starts_with($phone, '0')) {
-            $phone = '62' . substr($phone, 1);
+        if (str_starts_with($angka, '0')) {
+            return '62'.substr($angka, 1);
         }
 
-        return $phone;
+        if (str_starts_with($angka, '8')) {
+            return '62'.$angka;
+        }
+
+        return $angka;
+    }
+
+    private function driver(): string
+    {
+        return (string) config('services.whatsapp.driver', 'log');
     }
 }

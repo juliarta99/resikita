@@ -1,114 +1,144 @@
-<div class="mx-auto max-w-5xl space-y-6">
-    <div>
-        <h1 class="text-2xl font-semibold text-primary-900">Saldo &amp; Penarikan</h1>
-        <p class="mt-1 text-sm text-gray-500">Pemasukan dari penjualan produk masuk otomatis ke saldo Anda.</p>
-    </div>
-    @if (session('ok'))
-        <div class="rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700">{{ session('ok') }}</div>
+@php use App\Support\Rupiah; use App\Enums\TipeTransaksiDompet; @endphp
+
+<div>
+    <x-ui.kepala-halaman
+        judul="Saldo UMKM"
+        keterangan="Pendapatan penjualan dan riwayat penarikannya.">
+        @if ($umkm !== null)
+            <x-slot:aksi>
+                <x-ui.tombol wire:click="bukaForm" ikon="dompet">Ajukan penarikan</x-ui.tombol>
+            </x-slot:aksi>
+        @endif
+    </x-ui.kepala-halaman>
+
+    @if ($umkm === null)
+        <x-ui.kartu>
+            <x-ui.kosong ikon="peringatan" judul="Akun belum terhubung ke UMKM"
+                         pesan="Hubungi admin Resikita untuk menghubungkan akun Anda."/>
+        </x-ui.kartu>
+    @else
+        <div class="grid gap-6 lg:grid-cols-3">
+            <div class="space-y-6">
+                <x-ui.kartu>
+                    <p class="text-xs font-medium text-gray-500">Saldo tersedia</p>
+                    <p class="mt-1 text-3xl font-bold tracking-tight text-primary-900">
+                        {{ Rupiah::format($saldo) }}
+                    </p>
+                    <p class="mt-3 text-xs text-gray-500">
+                        Minimal penarikan {{ Rupiah::format($minimum) }}. Saldo langsung dipotong
+                        saat pengajuan dibuat, bukan saat disetujui.
+                    </p>
+                </x-ui.kartu>
+
+                <x-ui.kartu padat judul="Riwayat penarikan">
+                    @if ($penarikan->isEmpty())
+                        <x-ui.kosong ikon="dompet" judul="Belum ada penarikan"
+                                     pesan="Pengajuan Anda akan tampil di sini beserta statusnya."/>
+                    @else
+                        <ul class="divide-y divide-gray-100">
+                            @foreach ($penarikan as $tarik)
+                                <li class="px-5 py-4">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-semibold text-primary-900">
+                                                {{ Rupiah::format($tarik->jumlah) }}
+                                            </p>
+                                            <p class="truncate text-xs text-gray-500">
+                                                {{ $tarik->nama_bank }} &middot; {{ $tarik->no_rekening }}
+                                            </p>
+                                            <p class="text-xs text-gray-400">
+                                                {{ $tarik->created_at->translatedFormat('j M Y') }}
+                                            </p>
+                                        </div>
+                                        <x-ui.lencana :status="$tarik->status"/>
+                                    </div>
+
+                                    @if ($tarik->catatan)
+                                        <p class="mt-2 rounded-lg bg-gray-50 p-2.5 text-xs text-gray-600">
+                                            {{ $tarik->catatan }}
+                                        </p>
+                                    @endif
+                                </li>
+                            @endforeach
+                        </ul>
+
+                        <div class="border-t border-gray-100 px-5 py-3">{{ $penarikan->links() }}</div>
+                    @endif
+                </x-ui.kartu>
+            </div>
+
+            {{-- Mutasi --}}
+            <x-ui.kartu padat class="lg:col-span-2" judul="Mutasi saldo"
+                        keterangan="Setiap perubahan saldo tercatat dengan posisi sebelum dan sesudahnya.">
+                @if ($mutasi->isEmpty())
+                    <x-ui.kosong ikon="jejak" judul="Belum ada mutasi"
+                                 pesan="Saldo bertambah otomatis setiap pesanan dinyatakan selesai."/>
+                @else
+                    <x-ui.tabel :kepala="['Keterangan', 'Jenis', 'Jumlah', 'Saldo akhir', 'Waktu']">
+                        @foreach ($mutasi as $baris)
+                            @php $masuk = ! in_array($baris->tipe, [TipeTransaksiDompet::Penarikan, TipeTransaksiDompet::Belanja], true); @endphp
+                            <tr>
+                                <td class="px-4 py-3 text-gray-700">{{ $baris->keterangan ?? '—' }}</td>
+                                <td class="px-4 py-3">
+                                    <x-ui.lencana :warna="$masuk ? 'hijau' : 'abu'" :label="$baris->tipe->label()"/>
+                                </td>
+                                <td class="whitespace-nowrap px-4 py-3 font-medium {{ $masuk ? 'text-primary-700' : 'text-red-600' }}">
+                                    {{ $masuk ? '+' : '−' }}{{ Rupiah::format($baris->jumlah) }}
+                                </td>
+                                <td class="whitespace-nowrap px-4 py-3 text-gray-600">
+                                    {{ Rupiah::format($baris->saldo_sesudah) }}
+                                </td>
+                                <td class="whitespace-nowrap px-4 py-3 text-xs text-gray-500">
+                                    {{ $baris->created_at->translatedFormat('j M Y, H:i') }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </x-ui.tabel>
+
+                    <div class="border-t border-gray-100 px-5 py-3">{{ $mutasi->links() }}</div>
+                @endif
+            </x-ui.kartu>
+        </div>
     @endif
 
-    {{-- Kartu saldo --}}
-    <div class="flex flex-col gap-4 rounded-2xl bg-primary-500 p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div>
-            <p class="text-sm text-primary-100">Total Saldo</p>
-            <p class="mt-1 text-2xl font-bold sm:text-3xl">Rp {{ number_format($saldo, 0, ',', '.') }}</p>
-        </div>
-        <button wire:click="bukaTarik"
-                class="w-full rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 sm:w-auto sm:flex-none">
-            Tarik Saldo
-        </button>
-    </div>
-
-    <div class="grid gap-4 sm:gap-6 lg:grid-cols-2">
-        {{-- Riwayat transaksi --}}
-        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div class="border-b border-gray-100 px-4 py-3 sm:px-5">
-                <h2 class="font-semibold text-primary-900">Riwayat Transaksi Saldo</h2>
+    <x-modal active="formTerbuka">
+        <form wire:submit="ajukan">
+            <div class="border-b border-gray-100 px-6 py-4">
+                <h2 class="text-base font-semibold text-primary-900">Ajukan penarikan saldo</h2>
             </div>
-            <table class="w-full text-left text-sm">
-                <tbody class="divide-y divide-gray-100">
-                    @forelse ($transaksi as $t)
-                        <tr>
-                            <td class="px-4 py-3 sm:px-5">
-                                <p class="font-medium capitalize text-gray-800">{{ $t->tipe }}</p>
-                                <p class="text-xs text-gray-500">{{ $t->keterangan }}</p>
-                                <p class="text-xs text-gray-400">{{ $t->created_at->format('d M Y H:i') }}</p>
-                            </td>
-                            <td class="whitespace-nowrap px-4 py-3 text-right align-top font-semibold sm:px-5 {{ $t->jumlah < 0 ? 'text-red-600' : 'text-primary-500' }}">
-                                {{ $t->jumlah < 0 ? '-' : '+' }}Rp {{ number_format(abs($t->jumlah), 0, ',', '.') }}
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td class="px-4 py-6 text-center text-sm text-gray-400 sm:px-5">Belum ada transaksi.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-            <div class="px-4 py-3 sm:px-5">{{ $transaksi->links() }}</div>
-        </div>
 
-        {{-- Riwayat penarikan --}}
-        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div class="border-b border-gray-100 px-4 py-3 sm:px-5">
-                <h2 class="font-semibold text-primary-900">Riwayat Penarikan</h2>
-            </div>
-            <table class="w-full text-left text-sm">
-                <tbody class="divide-y divide-gray-100">
-                    @forelse ($penarikan as $w)
-                        <tr>
-                            <td class="px-4 py-3 sm:px-5">
-                                <p class="font-medium text-gray-800">Rp {{ number_format($w->jumlah, 0, ',', '.') }}</p>
-                                <p class="break-words text-xs text-gray-500">{{ $w->nama_bank }} • {{ $w->no_rekening }} • a.n {{ $w->atas_nama }}</p>
-                                @if ($w->catatan)<p class="text-xs text-red-500">{{ $w->catatan }}</p>@endif
-                                <p class="text-xs text-gray-400">{{ $w->created_at->format('d M Y H:i') }}</p>
-                            </td>
-                            <td class="px-4 py-3 text-right align-top sm:px-5">
-                                @php $c = ['menunggu'=>'bg-amber-100 text-amber-700','disetujui'=>'bg-primary-100 text-primary-700','ditolak'=>'bg-red-100 text-red-700'][$w->status] ?? 'bg-gray-100 text-gray-600'; @endphp
-                                <span class="inline-block whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold capitalize {{ $c }}">{{ $w->status }}</span>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td class="px-4 py-6 text-center text-sm text-gray-400 sm:px-5">Belum ada penarikan.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
+            <div class="space-y-4 px-6 py-5">
+                <x-ui.bidang label="Jumlah" untuk="jumlah-tarik" :wajib="true"
+                             petunjuk="Rupiah penuh tanpa titik. Minimal {{ Rupiah::format($minimum ?? 0) }}."
+                             :galat="$errors->first('jumlah')">
+                    <x-ui.isian id="jumlah-tarik" wire:model="jumlah" inputmode="numeric" placeholder="100000"
+                                :galat="$errors->has('jumlah')"/>
+                </x-ui.bidang>
 
-    {{-- Modal tarik --}}
-    @if ($showTarik)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div class="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:p-6">
-                <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-primary-900">Tarik Saldo</h3>
-                    <button wire:click="$set('showTarik', false)" class="text-gray-400 hover:text-gray-600">&times;</button>
-                </div>
-                <div class="space-y-3">
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-gray-700">Jumlah (min. Rp 50.000)</label>
-                        <input type="number" wire:model="jumlah" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="0">
-                        @error('jumlah')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-gray-700">Nama Bank</label>
-                        <input type="text" wire:model="nama_bank" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="mis. BCA">
-                        @error('nama_bank')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-gray-700">Nomor Rekening</label>
-                        <input type="text" wire:model="no_rekening" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        @error('no_rekening')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-gray-700">Atas Nama</label>
-                        <input type="text" wire:model="atas_nama" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        @error('atas_nama')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
-                    </div>
-                </div>
-                <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                    <button wire:click="$set('showTarik', false)" class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
-                    <button wire:click="ajukan" class="rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">Ajukan Penarikan</button>
-                </div>
+                <x-ui.bidang label="Nama bank" untuk="nama-bank" :wajib="true" :galat="$errors->first('namaBank')">
+                    <x-ui.isian id="nama-bank" wire:model="namaBank" placeholder="BRI"
+                                :galat="$errors->has('namaBank')"/>
+                </x-ui.bidang>
+
+                <x-ui.bidang label="Nomor rekening" untuk="no-rekening" :wajib="true"
+                             :galat="$errors->first('noRekening')">
+                    <x-ui.isian id="no-rekening" wire:model="noRekening" inputmode="numeric"
+                                class="font-mono" :galat="$errors->has('noRekening')"/>
+                </x-ui.bidang>
+
+                <x-ui.bidang label="Atas nama" untuk="atas-nama" :wajib="true"
+                             petunjuk="Harus sama persis dengan nama di rekening."
+                             :galat="$errors->first('atasNama')">
+                    <x-ui.isian id="atas-nama" wire:model="atasNama" :galat="$errors->has('atasNama')"/>
+                </x-ui.bidang>
             </div>
-        </div>
-    @endif
+
+            <div class="flex justify-end gap-2 border-t border-gray-100 px-6 py-4">
+                <x-ui.tombol jenis="kedua" wire:click="$set('formTerbuka', false)">Batal</x-ui.tombol>
+                <x-ui.tombol tipe="submit" wire:loading.attr="disabled" wire:target="ajukan">
+                    Ajukan penarikan
+                </x-ui.tombol>
+            </div>
+        </form>
+    </x-modal>
 </div>

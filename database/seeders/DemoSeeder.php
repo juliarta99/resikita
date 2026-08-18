@@ -1,658 +1,856 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
-use App\Models\Article;
+use App\Enums\AlasanRouting;
+use App\Enums\JenisTps;
+use App\Enums\KategoriSampah;
+use App\Enums\Role as RoleEnum;
+use App\Enums\StatusAktif;
+use App\Enums\StatusArtikel;
+use App\Enums\StatusPengajuanWilayah;
+use App\Enums\StatusProgres;
+use App\Enums\StatusRegistrasiWilayah;
+use App\Enums\StatusUmkm;
+use App\Enums\SumberInput;
+use App\Enums\TipeArtikel;
+use App\Models\Artikel;
+use App\Models\ArtikelKategori;
 use App\Models\BankSampah;
-use App\Models\BanjarDinas;
-use App\Models\Kecamatan;
-use App\Models\Kelurahan;
-use App\Models\Notification;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Payment;
-use App\Models\Product;
-use App\Models\ProductCategory;
-use App\Models\ProductImage;
-use App\Models\Report;
-use App\Models\ReportAssignment;
-use App\Models\ReportCategory;
-use App\Models\ReportProgress;
+use App\Models\BankSampahHarga;
+use App\Models\Dompet;
+use App\Models\Laporan;
+use App\Models\LaporanKategori;
+use App\Models\PengajuanWilayah;
+use App\Models\Produk;
+use App\Models\ProdukKategori;
 use App\Models\Tps;
-use App\Models\TpsMember;
-use App\Models\TpsSubscription;
 use App\Models\Umkm;
+use App\Models\UmkmDompet;
 use App\Models\User;
-use App\Models\Wallet;
-use App\Models\WasteClassification;
-use App\Models\WasteDeposit;
-use App\Models\WasteDepositItem;
-use App\Models\WastePrice;
-use App\Models\Withdrawal;
+use App\Models\Wilayah;
+use App\Services\Auth\AkunService;
+use App\Services\Konten\TeksBacaService;
+use App\Services\Laporan\LaporanService;
+use App\Services\Laporan\TindakLanjutService;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Spatie\Permission\PermissionRegistrar;
 
+/**
+ * Data demo untuk menjalankan seluruh alur tanpa mengetik apa pun.
+ *
+ * Sengaja tersebar di tiga provinsi dari tiga pulau berbeda. Demo yang
+ * seluruh datanya berasal dari satu kabupaten akan terlihat persis
+ * seperti yang ingin dihindari produk ini: sistem daerah yang mengaku
+ * nasional.
+ *
+ * Seeder ini tidak dijalankan di produksi. Kata sandi seragam dan lemah
+ * memang disengaja untuk demo, dan justru karena itu ia harus tetap
+ * jauh dari basis data sungguhan.
+ *
+ * ## Yang disemai di sini dan yang tidak
+ *
+ * Berkas ini menyemai **kerangkanya**: wilayah, akun, bank sampah, TPS,
+ * UMKM, artikel, dan laporan beserta daur hidupnya. Transaksi yang
+ * memindahkan uang dan stok ada di DemoTransaksiSeeder, dan jejak
+ * pemakaian fitur di DemoInteraksiSeeder. Pemisahan itu bukan kerapian
+ * semata: keduanya bergantung pada saldo dan produk yang baru ada
+ * setelah berkas ini selesai.
+ *
+ * Daftar akun lengkapnya ada di AKUN-DEMO.md di akar repositori.
+ */
 class DemoSeeder extends Seeder
 {
-    private $faker;
-    private int $seq = 0;
-    private array $saldo = [];
+    public const KATA_SANDI = 'password';
 
     public function run(): void
     {
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
-        $this->faker = \Faker\Factory::create('id_ID');
+        if (app()->isProduction()) {
+            $this->command?->error('DemoSeeder tidak boleh dijalankan di produksi.');
 
-        $this->command->info('› Wilayah & pejabat...');
-        [$banjars] = $this->seedWilayah();
-
-        $this->command->info('› Eksekutif & admin...');
-        $this->seedEksekutif();
-
-        $this->command->info('› Harga sampah & kategori...');
-        $wastePrices = $this->seedMasterData();
-
-        $this->command->info('› Masyarakat & petugas lapangan...');
-        [$masyarakat, $petugasLapangan] = $this->seedWarga($banjars);
-
-        $this->command->info('› Bank sampah & petugas...');
-        [$bankSampahs, $petugasBS] = $this->seedBankSampah($banjars);
-
-        $this->command->info('› TPS & langganan...');
-        $this->seedTps($banjars, $masyarakat);
-
-        $this->command->info('› UMKM & produk...');
-        [$umkms, $products] = $this->seedUmkm($banjars);
-
-        $this->command->info('› Setor sampah (kredit saldo)...');
-        $this->seedDeposits($bankSampahs, $petugasBS, $masyarakat, $wastePrices);
-
-        $this->command->info('› Penarikan saldo...');
-        $this->seedWithdrawals($masyarakat);
-
-        $this->command->info('› Pesanan marketplace...');
-        $this->seedOrders($masyarakat, $umkms, $products);
-
-        $this->command->info('› Laporan sampah...');
-        $this->seedReports($masyarakat, $petugasLapangan, $banjars);
-
-        $this->command->info('› Klasifikasi AI, artikel, notifikasi...');
-        $this->seedMisc($masyarakat);
-
-        $this->command->info('✔ Seeder demo selesai.');
-    }
-
-    /* ============================================================ */
-
-    private function makeUser(array $attrs, string $role, array $scope = []): User
-    {
-        $this->seq++;
-
-        $user = User::create(array_merge([
-            'nik'               => '5103' . str_pad((string) $this->seq, 12, '0', STR_PAD_LEFT),
-            'tanggal_lahir'     => $this->faker->dateTimeBetween('-55 years', '-18 years')->format('Y-m-d'),
-            'jenis_kelamin'     => $this->faker->randomElement(['L', 'P']),
-            'phone'             => '628' . str_pad((string) $this->seq, 9, '0', STR_PAD_LEFT),
-            'phone_verified_at' => now(),
-            'password'          => Hash::make('password'),
-            'is_active'         => true,
-        ], $attrs, $scope));
-
-        $user->assignRole($role);
-
-        return $user;
-    }
-
-    private function coord(): array
-    {
-        return [
-            'lat' => $this->faker->randomFloat(7, -8.82, -8.50),
-            'lng' => $this->faker->randomFloat(7, 115.08, 115.26),
-        ];
-    }
-
-    private function wallet(User $user, float $delta, string $tipe, $ref = null, ?string $ket = null): void
-    {
-        $wallet = Wallet::firstOrCreate(['user_id' => $user->id], ['saldo' => 0]);
-        $current = $this->saldo[$user->id] ?? (float) $wallet->saldo;
-        $new = $current + $delta;
-
-        if ($new < 0) {
-            return; // jaga saldo tidak minus saat seeding
+            return;
         }
 
-        $wallet->transactions()->create([
-            'tipe'           => $tipe,
-            'jumlah'         => $delta,
-            'saldo_after'    => $new,
-            'reference_type' => $ref?->getMorphClass(),
-            'reference_id'   => $ref?->getKey(),
-            'keterangan'     => $ket,
+        $badung = $this->wilayah('51.03');
+        $sleman = $this->wilayah('34.04');
+        $sikka = $this->wilayah('53.10');
+
+        if ($badung === null || $sleman === null || $sikka === null) {
+            $this->command?->error('WilayahSeeder harus dijalankan lebih dulu.');
+
+            return;
+        }
+
+        // Dua wilayah bergabung, satu sengaja dibiarkan belum, supaya
+        // papan Fasilitator Wilayah punya isi sejak awal dan alur
+        // pengajuan wilayah bisa diperagakan tanpa menyiapkan apa pun.
+        $this->verifikasi($badung);
+        $this->verifikasi($sleman);
+
+        $this->semaiAkunPlatform();
+        $this->semaiPemerintah($badung, $sleman);
+        $this->semaiWarga($badung, $sleman, $sikka);
+        $this->semaiBankSampah($badung, $sleman);
+        $this->semaiTps($badung, $sleman);
+        $this->semaiUmkm($badung, $sleman, $sikka);
+        $this->semaiArtikel();
+        $this->semaiLaporan($badung, $sikka);
+        $this->semaiPengajuanWilayah($sikka);
+
+        $this->command?->newLine();
+        $this->command?->info('Kerangka demo siap. Kata sandi seluruh akun: '.self::KATA_SANDI);
+    }
+
+    // ----------------------------------------------------------------
+    // Akun
+    // ----------------------------------------------------------------
+
+    private function semaiAkunPlatform(): void
+    {
+        $this->akun('admin@resikita.id', 'Rizky Ananda Putra', RoleEnum::Admin, [
+            'phone' => '081211110001',
         ]);
 
-        $wallet->update(['saldo' => $new]);
-        $this->saldo[$user->id] = $new;
+        $this->akun('fasilitator@resikita.id', 'Dewi Anggraeni', RoleEnum::FasilitatorWilayah, [
+            'phone' => '081211110002',
+        ]);
     }
 
-    /* ============================================================ */
-
-    private function seedWilayah(): array
+    private function semaiPemerintah(Wilayah $badung, Wilayah $sleman): void
     {
-        $struktur = [
-            'Kuta'         => ['Kuta', 'Legian', 'Seminyak'],
-            'Kuta Selatan' => ['Jimbaran', 'Ungasan', 'Benoa'],
-            'Kuta Utara'   => ['Kerobokan', 'Canggu', 'Tibubeneng'],
-            'Mengwi'       => ['Sempidi', 'Lukluk', 'Sading'],
-            'Abiansemal'   => ['Sedang', 'Blahkiuh', 'Mambal'],
-            'Petang'       => ['Petang', 'Pelaga', 'Carangsari'],
-        ];
+        $this->akun('provinsi.bali@resikita.id', 'I Gusti Ngurah Rai Wijaya', RoleEnum::AdminProvinsi, [
+            'wilayah_id' => $badung->parent_id,
+            'phone' => '081233330001',
+        ]);
 
-        $banjars = [];
+        $this->akun('provinsi.diy@resikita.id', 'Raden Bagus Nugroho', RoleEnum::AdminProvinsi, [
+            'wilayah_id' => $sleman->parent_id,
+            'phone' => '081233330002',
+        ]);
 
-        foreach ($struktur as $namaKec => $kelurahanList) {
-            $kec = Kecamatan::firstOrCreate(['nama' => $namaKec]);
-            $this->makeUser([
-                'name'  => 'Camat ' . $namaKec,
-                'email' => 'camat.' . Str::slug($namaKec) . '@badung.go.id',
-                'nip'   => '1976' . str_pad((string) $this->seq, 14, '0', STR_PAD_LEFT),
-            ], 'camat', ['kecamatan_id' => $kec->id]);
+        $this->akun('kabupaten.badung@resikita.id', 'I Made Sudiarta', RoleEnum::AdminKabupaten, [
+            'wilayah_id' => $badung->id,
+            'phone' => '081233330003',
+        ]);
 
-            foreach ($kelurahanList as $namaKel) {
-                $kel = Kelurahan::firstOrCreate(['kecamatan_id' => $kec->id, 'nama' => $namaKel]);
-                $this->makeUser([
-                    'name'  => 'Lurah ' . $namaKel,
-                    'email' => 'lurah.' . Str::slug($namaKel) . '.' . $this->seq . '@badung.go.id',
-                    'nip'   => '1980' . str_pad((string) $this->seq, 14, '0', STR_PAD_LEFT),
-                ], 'lurah', ['kecamatan_id' => $kec->id, 'kelurahan_id' => $kel->id]);
+        $this->akun('kabupaten.sleman@resikita.id', 'Sri Wahyuni', RoleEnum::AdminKabupaten, [
+            'wilayah_id' => $sleman->id,
+            'phone' => '081233330004',
+        ]);
 
-                foreach (['Kaja', 'Kelod'] as $arah) {
-                    $banjar = BanjarDinas::firstOrCreate([
-                        'kelurahan_id' => $kel->id,
-                        'nama'         => 'Banjar ' . $namaKel . ' ' . $arah,
-                    ]);
-                    $this->makeUser([
-                        'name'  => 'Kepala Dinas ' . $banjar->nama,
-                        'email' => 'kadis.' . Str::slug($banjar->nama) . '.' . $this->seq . '@badung.go.id',
-                        'nip'   => '1985' . str_pad((string) $this->seq, 14, '0', STR_PAD_LEFT),
-                    ], 'kepala_dinas_banjar', [
-                        'kecamatan_id' => $kec->id,
-                        'kelurahan_id' => $kel->id,
-                        'banjar_id'    => $banjar->id,
-                    ]);
-                    $banjars[] = $banjar;
-                }
-            }
-        }
+        // Kepala desa dipilih dari desa yang benar-benar ada di hierarki,
+        // bukan desa pertama yang kebetulan terambil. Nama desanya ikut
+        // masuk ke nama akun supaya cakupannya terbaca di layar.
+        $mengwi = $this->wilayah('51.03.05.2001');
+        $sardonoharjo = $this->wilayah('34.04.12.2001');
 
-        return [$banjars];
-    }
-
-    private function seedEksekutif(): void
-    {
-        $this->makeUser(['name' => 'Bupati Badung', 'email' => 'bupati@badung.go.id', 'nip' => '1970' . str_pad((string) $this->seq, 14, '0', STR_PAD_LEFT)], 'bupati');
-        $this->makeUser(['name' => 'Admin Dinas LHK', 'email' => 'dinas@badung.go.id', 'nip' => '1982' . str_pad((string) $this->seq, 14, '0', STR_PAD_LEFT)], 'admin_dinas');
-        $this->makeUser(['name' => 'Administrator', 'email' => 'admin@nitiresik.id'], 'admin');
-    }
-
-    private function seedMasterData(): array
-    {
-        $prices = [
-            ['Botol Plastik PET', 4000], ['Kardus', 2500], ['Kertas HVS', 3000],
-            ['Koran Bekas', 2000], ['Kaleng Aluminium', 12000], ['Besi', 5000],
-            ['Botol Kaca', 800], ['Plastik Kresek', 1500], ['Tembaga', 60000],
-            ['Minyak Jelantah', 6000],
-        ];
-        $out = [];
-        foreach ($prices as [$nama, $harga]) {
-            $out[] = WastePrice::firstOrCreate(
-                ['jenis_sampah' => $nama],
-                ['satuan' => 'kg', 'harga_per_kg' => $harga, 'is_active' => true]
-            );
-        }
-
-        foreach (['Pupuk & Kompos', 'Kerajinan', 'Fesyen Daur Ulang', 'Rumah Tangga', 'Aksesori'] as $c) {
-            ProductCategory::firstOrCreate(['nama' => $c]);
-        }
-
-        $rc = ['Pembakaran sampah', 'Pembuangan liar', 'Saluran tersumbat', 'Sampah di sungai/pantai', 'Sampah menumpuk', 'TPS penuh'];
-        foreach ($rc as $c) {
-            ReportCategory::firstOrCreate(['nama' => $c]);
-        }
-
-        return $out;
-    }
-
-    private function seedWarga(array $banjars): array
-    {
-        $masyarakat = [];
-        for ($i = 0; $i < 30; $i++) {
-            $b = $this->faker->randomElement($banjars);
-            $u = $this->makeUser(array_merge([
-                'name'              => $this->faker->name(),
-                'email'             => 'warga' . ($i + 1) . '@mail.test',
-                'nik'               => str_pad((string) (5100000000000000 + $i + 1), 16, '0', STR_PAD_LEFT),
-                'phone'             => '628' . str_pad((string) (1100000000 + $i + 1), 11, '0', STR_PAD_LEFT),
-                'phone_verified_at' => now(),
-                'kode_qr'           => 'NR' . str_pad((string) ($this->seq + 1), 8, '0', STR_PAD_LEFT),
-            ], $this->coord()), 'masyarakat', [
-                'kecamatan_id' => $b->kelurahan->kecamatan_id,
-                'kelurahan_id' => $b->kelurahan_id,
-                'banjar_id'    => $b->id,
+        if ($mengwi !== null) {
+            $this->akun('desa.mengwi@resikita.id', 'I Nyoman Astawa', RoleEnum::KepalaDesa, [
+                'wilayah_id' => $mengwi->id,
+                'phone' => '081233330005',
             ]);
-            Wallet::create(['user_id' => $u->id, 'saldo' => 0]);
-            $masyarakat[] = $u;
         }
 
-        $petugasLapangan = [];
-        for ($i = 0; $i < 5; $i++) {
-            $petugasLapangan[] = $this->makeUser([
-                'name'  => 'Petugas Lapangan ' . ($i + 1),
-                'email' => 'lapangan' . ($i + 1) . '@nitiresik.id',
-            ], 'petugas_lapangan');
+        if ($sardonoharjo !== null) {
+            $this->akun('desa.sardonoharjo@resikita.id', 'Bambang Sutrisno', RoleEnum::KepalaDesa, [
+                'wilayah_id' => $sardonoharjo->id,
+                'phone' => '081233330006',
+            ]);
         }
 
-        return [$masyarakat, $petugasLapangan];
+        $petugas = [
+            ['petugas.badung1@resikita.id', 'I Wayan Sukadana', $badung, '081244440001'],
+            ['petugas.badung2@resikita.id', 'I Ketut Merta', $badung, '081244440002'],
+            ['petugas.sleman1@resikita.id', 'Agus Purnomo', $sleman, '081244440003'],
+        ];
+
+        foreach ($petugas as [$email, $nama, $wilayah, $phone]) {
+            $this->akun($email, $nama, RoleEnum::Petugas, [
+                'wilayah_id' => $wilayah->id,
+                'phone' => $phone,
+            ]);
+        }
     }
 
-    private function seedBankSampah(array $banjars): array
+    private function semaiWarga(Wilayah $badung, Wilayah $sleman, Wilayah $sikka): void
     {
-        $names = ['Bank Sampah Sari Lestari', 'Bank Sampah Bumi Hijau', 'Bank Sampah Werdhi Guna', 'Bank Sampah Amerta'];
-        $bankSampahs = [];
-        $petugasBS = [];
+        $daftar = [
+            ['warga.kadek@resikita.id', 'Ni Kadek Sari Dewi', $badung, '081255550001'],
+            ['warga.wayan@resikita.id', 'I Wayan Gede Suparta', $badung, '081255550002'],
+            ['warga.komang@resikita.id', 'Komang Ayu Lestari', $badung, '081255550003'],
+            ['warga.siti@resikita.id', 'Siti Nurhaliza Rahmawati', $sleman, '081255550004'],
+            ['warga.budi@resikita.id', 'Budi Santoso', $sleman, '081255550005'],
 
-        foreach ($names as $i => $nama) {
-            $b = $this->faker->randomElement($banjars);
-            $bs = BankSampah::create(array_merge([
-                'nama'      => $nama,
-                'alamat'    => $this->faker->address(),
-                'no_hp'     => '0361' . $this->faker->numberBetween(700000, 999999),
-                'banjar_id' => $b->id,
-            ], $this->coord()));
+            // Pelapor dari wilayah yang belum bergabung. Laporannya yang
+            // membuat papan fasilitator punya isi.
+            ['warga.maria@resikita.id', 'Maria Yosefina Da Costa', $sikka, '081255550006'],
+        ];
 
-            $this->makeUser([
-                'name'  => 'Admin ' . $nama,
-                'email' => 'adminbs' . ($i + 1) . '@nitiresik.id',
-            ], 'admin_bank_sampah', ['bank_sampah_id' => $bs->id]);
-
-            $ps = [];
-            for ($p = 0; $p < 2; $p++) {
-                $ps[] = $this->makeUser([
-                    'name'  => 'Petugas ' . $nama . ' ' . ($p + 1),
-                    'email' => 'petugasbs' . ($i + 1) . '_' . ($p + 1) . '@nitiresik.id',
-                ], 'petugas_bank_sampah', ['bank_sampah_id' => $bs->id]);
-            }
-
-            $bankSampahs[] = $bs;
-            $petugasBS[$bs->id] = $ps;
+        foreach ($daftar as [$email, $nama, $wilayah, $phone]) {
+            $this->akun($email, $nama, RoleEnum::Masyarakat, [
+                'wilayah_id' => $wilayah->id,
+                'phone' => $phone,
+            ]);
         }
-
-        return [$bankSampahs, $petugasBS];
     }
 
-    private function seedTps(array $banjars, array $masyarakat): void
+    // ----------------------------------------------------------------
+    // Entitas
+    // ----------------------------------------------------------------
+
+    private function semaiBankSampah(Wilayah $badung, Wilayah $sleman): void
     {
-        $tpsList = [];
-        for ($i = 0; $i < 5; $i++) {
-            $b = $this->faker->randomElement($banjars);
-            $berbayar = $this->faker->boolean(60);
-            $tps = Tps::create(array_merge([
-                'nama'        => 'TPS ' . $b->kelurahan->nama . ' ' . ($i + 1),
-                'alamat'      => $this->faker->address(),
-                'no_hp'       => '0361' . $this->faker->numberBetween(700000, 999999),
-                'is_berbayar' => $berbayar,
-                'tarif'       => $berbayar ? $this->faker->randomElement([15000, 20000, 25000]) : null,
-                'banjar_id'   => $b->id,
-            ], $this->coord()));
+        /*
+         * Dua unit dengan katalog harga berbeda untuk jenis yang sama.
+         * Itu bukan variasi hiasan: harga sampah memang per unit sejak
+         * skema ini, dan demo yang harganya seragam di semua unit
+         * menyembunyikan justru perubahan yang paling penting.
+         *
+         * Nilai rupiah penuh sebagai integer, bukan rupiah dikali seratus.
+         */
+        $unit = [
+            [
+                'Bank Sampah Sari Lestari',
+                'Jalan Raya Mengwi Nomor 27, Mengwi',
+                -8.5540, 115.1690, '081266660001', $badung,
+                'banksampah.badung@resikita.id', 'Ni Luh Putu Ariani',
+                [
+                    ['Botol PET bening', KategoriSampah::Anorganik, 3_500],
+                    ['Kardus', KategoriSampah::Anorganik, 2_000],
+                    ['Kertas HVS', KategoriSampah::Anorganik, 2_500],
+                    ['Koran bekas', KategoriSampah::Anorganik, 1_800],
+                    ['Kaleng aluminium', KategoriSampah::Anorganik, 12_000],
+                    ['Plastik HDPE', KategoriSampah::Anorganik, 4_000],
+                    ['Beling', KategoriSampah::Anorganik, 500],
+                    ['Minyak jelantah', KategoriSampah::Residu, 6_000],
+                    ['Elektronik kecil', KategoriSampah::Elektronik, 8_000],
+                    ['Baterai bekas', KategoriSampah::B3, 1_000],
+                ],
+            ],
+            [
+                'Bank Sampah Guyub Rukun',
+                'Jalan Kaliurang Kilometer 10, Ngaglik',
+                -7.7100, 110.4000, '081266660002', $sleman,
+                'banksampah.sleman@resikita.id', 'Retno Palupi',
+                [
+                    ['Botol PET bening', KategoriSampah::Anorganik, 3_200],
+                    ['Kardus', KategoriSampah::Anorganik, 2_200],
+                    ['Kertas HVS', KategoriSampah::Anorganik, 2_400],
+                    ['Kaleng aluminium', KategoriSampah::Anorganik, 11_500],
+                    ['Plastik HDPE', KategoriSampah::Anorganik, 3_800],
+                    ['Minyak jelantah', KategoriSampah::Residu, 6_500],
+                    ['Elektronik kecil', KategoriSampah::Elektronik, 7_500],
+                ],
+            ],
+        ];
 
-            $this->makeUser([
-                'name'  => 'Admin ' . $tps->nama,
-                'email' => 'admintps' . ($i + 1) . '@nitiresik.id',
-            ], 'admin_tps', ['tps_id' => $tps->id]);
-
-            $tpsList[] = $tps;
-        }
-
-        // Langganan: sebagian warga jadi anggota TPS berbayar
-        $anggota = collect($masyarakat)->random(15);
-        foreach ($anggota as $warga) {
-            $tps = $this->faker->randomElement($tpsList);
-            $member = TpsMember::firstOrCreate(
-                ['tps_id' => $tps->id, 'user_id' => $warga->id],
-                ['status' => 'aktif', 'joined_at' => now()->subDays($this->faker->numberBetween(30, 300))]
+        foreach ($unit as [$nama, $alamat, $lat, $lng, $phone, $wilayah, $email, $pengelola, $katalog]) {
+            $bank = BankSampah::updateOrCreate(
+                ['nama' => $nama],
+                [
+                    'alamat' => $alamat,
+                    'latitude' => $lat,
+                    'longitude' => $lng,
+                    'phone' => $phone,
+                    'wilayah_id' => $wilayah->id,
+                    'status' => StatusAktif::Aktif,
+                    'is_verified' => true,
+                ],
             );
 
-            if (! $tps->is_berbayar) {
-                continue;
-            }
+            $this->akun($email, $pengelola, RoleEnum::BankSampah, [
+                'bank_sampah_id' => $bank->id,
+                'wilayah_id' => $wilayah->id,
+                'phone' => $phone,
+            ]);
 
-            foreach ([now()->subMonth(), now()] as $bulan) {
-                $lunas = $this->faker->boolean(70);
-                $metode = $this->faker->randomElement(['saldo', 'midtrans']);
-                TpsSubscription::create([
-                    'periode'      => $bulan->format('Y-m'),
-                    'jumlah'       => $tps->tarif,
-                    'status'       => $lunas ? 'lunas' : 'menunggu',
-                    'metode_bayar' => $lunas ? $metode : null,
-                    'paid_at'      => $lunas ? $bulan : null,
-                    'tps_member_id' => $member->id,
-                ]);
-
-                if ($lunas && $metode === 'saldo') {
-                    $this->wallet($warga, -$tps->tarif, 'belanja', $tps, 'Iuran TPS ' . $bulan->format('M Y'));
-                }
+            foreach ($katalog as [$jenis, $kategori, $harga]) {
+                BankSampahHarga::updateOrCreate(
+                    ['bank_sampah_id' => $bank->id, 'jenis_sampah' => $jenis],
+                    [
+                        'kategori' => $kategori,
+                        'satuan' => 'kg',
+                        'harga_per_satuan' => $harga,
+                        'is_active' => true,
+                    ],
+                );
             }
         }
     }
 
-    private function seedUmkm(array $banjars): array
+    private function semaiTps(Wilayah $badung, Wilayah $sleman): void
     {
-        $categories = ProductCategory::pluck('id')->all();
-        $umkmNames = [
-            'Kompos Werdhi'      => ['Pupuk Kompos Organik 5kg', 'Pupuk Cair Bio 1L', 'Media Tanam Premium'],
-            'Ecobrick Bali'      => ['Kursi Ecobrick', 'Pot Ecobrick', 'Meja Kecil Ecobrick'],
-            'Rajut Sampah Craft' => ['Tas Rajut Plastik', 'Dompet Daur Ulang', 'Topi Anyaman'],
-            'Loka Recycle'       => ['Tote Bag Kanvas Daur Ulang', 'Sandal Ban Bekas', 'Tempat Pensil'],
-            'Griya Daur'         => ['Lampu Hias Botol', 'Vas Bunga Kaca', 'Gantungan Kunci'],
-            'Sari Organik'       => ['Sabun Minyak Jelantah', 'Lilin Aromaterapi', 'Cairan Pembersih Eco'],
+        $daftar = [
+            ['TPS3R Mengwi Bersih', 'Jalan Raya Mengwitani, Mengwi', $badung, JenisTps::Tps3r, true, 25_000, -8.5545, 115.1695, 18.5],
+            ['TPS Kuta Selatan', 'Jalan Uluwatu Nomor 88, Jimbaran', $badung, JenisTps::Tps, false, null, -8.7900, 115.1780, 8.0],
+            ['TPS3R Ngaglik Asri', 'Jalan Palagan Tentara Pelajar, Ngaglik', $sleman, JenisTps::Tps3r, true, 20_000, -7.7105, 110.4005, 12.0],
+            ['TPS Depok Sejahtera', 'Jalan Affandi, Caturtunggal', $sleman, JenisTps::Tps, false, null, -7.7700, 110.3900, 6.5],
         ];
 
-        $umkms = [];
-        $products = [];
-        $i = 0;
-
-        foreach ($umkmNames as $nama => $produkList) {
-            $i++;
-            $b = $this->faker->randomElement($banjars);
-            $umkm = Umkm::create(array_merge([
-                'nama'      => $nama,
-                'deskripsi' => $this->faker->sentence(12),
-                'alamat'    => $this->faker->address(),
-                'no_hp'     => '08' . $this->faker->numberBetween(1000000000, 9999999999),
-                'banjar_id' => $b->id,
-                'status'    => 'aktif',
-            ], $this->coord()));
-
-            $this->makeUser([
-                'name'  => 'Pemilik ' . $nama,
-                'email' => 'umkm' . $i . '@mail.test',
-            ], 'umkm', ['umkm_id' => $umkm->id]);
-
-            foreach ($produkList as $namaProduk) {
-                $product = Product::create([
-                    'umkm_id'    => $umkm->id,
-                    'kategori_id' => $this->faker->randomElement($categories),
-                    'nama'       => $namaProduk,
-                    'deskripsi'  => $this->faker->sentence(14),
-                    'harga'      => $this->faker->randomElement([15000, 25000, 35000, 50000, 75000, 120000]),
-                    'stok'       => $this->faker->numberBetween(5, 60),
-                    'berat'      => $this->faker->numberBetween(200, 3000),
-                    'is_active'  => true,
-                ]);
-                for ($img = 0; $img < 2; $img++) {
-                    ProductImage::create(['product_id' => $product->id, 'path' => 'products/placeholder-' . $this->faker->numberBetween(1, 8) . '.jpg']);
-                }
-                $products[] = $product;
-            }
-
-            $umkms[] = $umkm;
-        }
-
-        return [$umkms, $products];
-    }
-
-    private function seedDeposits(array $bankSampahs, array $petugasBS, array $masyarakat, array $wastePrices): void
-    {
-        foreach ($masyarakat as $warga) {
-            $jumlahSetor = $this->faker->numberBetween(1, 4);
-            for ($d = 0; $d < $jumlahSetor; $d++) {
-                $bs = $this->faker->randomElement($bankSampahs);
-                $petugas = $this->faker->randomElement($petugasBS[$bs->id]);
-                $tanggal = now()->subDays($this->faker->numberBetween(0, 90));
-
-                $deposit = WasteDeposit::create([
-                    'bank_sampah_id' => $bs->id,
-                    'petugas_id'     => $petugas->id,
-                    'nasabah_id'     => $warga->id,
-                    'total_berat'    => 0,
-                    'total_nilai'    => 0,
-                    'status'         => 'selesai',
-                    'created_at'     => $tanggal,
-                    'updated_at'     => $tanggal,
-                ]);
-
-                $totalBerat = 0;
-                $totalNilai = 0;
-                $picked = collect($wastePrices)->random($this->faker->numberBetween(1, 3));
-                foreach ($picked as $price) {
-                    $berat = $this->faker->randomFloat(2, 0.5, 8);
-                    $sub = round($berat * (float) $price->harga_per_kg, 2);
-                    WasteDepositItem::create([
-                        'deposit_id'     => $deposit->id,
-                        'waste_price_id' => $price->id,
-                        'berat'          => $berat,
-                        'harga_snapshot' => $price->harga_per_kg,
-                        'subtotal'       => $sub,
-                    ]);
-                    $totalBerat += $berat;
-                    $totalNilai += $sub;
-                }
-
-                $deposit->update(['total_berat' => $totalBerat, 'total_nilai' => $totalNilai]);
-                $this->wallet($warga, $totalNilai, 'setor', $deposit, 'Setor sampah di ' . $bs->nama);
-            }
+        foreach ($daftar as [$nama, $alamat, $wilayah, $jenis, $berbayar, $tarif, $lat, $lng, $kapasitas]) {
+            Tps::updateOrCreate(
+                ['nama' => $nama],
+                [
+                    'alamat' => $alamat,
+                    'latitude' => $lat,
+                    'longitude' => $lng,
+                    'jenis' => $jenis,
+                    'is_berbayar' => $berbayar,
+                    'tarif_bulanan' => $tarif,
+                    'kapasitas_ton' => $kapasitas,
+                    'wilayah_id' => $wilayah->id,
+                ],
+            );
         }
     }
 
-    private function seedWithdrawals(array $masyarakat): void
+    /**
+     * Empat UMKM dalam empat keadaan verifikasi yang berbeda.
+     *
+     * Dua aktif supaya marketplace punya isi dari lebih dari satu toko,
+     * tanpa itu, pemecahan pesanan per toko dan ongkir yang berbeda antar
+     * penjual tidak bisa diperagakan sama sekali. Satu menunggu dan satu
+     * ditolak supaya antrean verifikasi admin dan halaman status
+     * pendaftaran punya isi sejak awal.
+     */
+    private function semaiUmkm(Wilayah $badung, Wilayah $sleman, Wilayah $sikka): void
     {
-        $kandidat = collect($masyarakat)->filter(fn ($u) => ($this->saldo[$u->id] ?? 0) > 30000)->values();
+        $kategori = ProdukKategori::query()->orderBy('id')->pluck('id', 'slug');
 
-        foreach ($kandidat->random(min(12, $kandidat->count())) as $warga) {
-            $maks = (float) ($this->saldo[$warga->id] ?? 0);
-            $jumlah = min($maks, $this->faker->randomElement([25000, 50000, 75000, 100000]));
-            if ($jumlah < 10000) {
-                continue;
-            }
+        if ($kategori->isEmpty()) {
+            $this->command?->warn('Kategori produk kosong, produk UMKM dilewati.');
+        }
 
-            $status = $this->faker->randomElement(['menunggu', 'menunggu', 'disetujui', 'ditolak', 'selesai']);
+        // ---- 1. Aktif, Sleman ----------------------------------------
+        $rumahDaur = $this->umkm(
+            'Rumah Daur Sleman',
+            [
+                'deskripsi' => 'Mengolah kemasan sachet dan kain perca menjadi tas, dompet, dan perabot rumah. Berdiri sejak 2019 bersama sepuluh ibu rumah tangga di Ngaglik.',
+                'alamat' => 'Jalan Kaliurang Kilometer 9, Sardonoharjo, Ngaglik',
+                'latitude' => -7.7000,
+                'longitude' => 110.3900,
+                'phone' => '081277770001',
+                'email' => 'halo@rumahdaursleman.id',
+                'wilayah_id' => $sleman->id,
 
-            $w = Withdrawal::create([
-                'user_id'     => $warga->id,
-                'jumlah'      => $jumlah,
-                'metode'      => 'transfer_bank',
-                'no_rekening' => 'BNI ' . $this->faker->numerify('##########'),
-                'status'      => $status,
-                'approved_by' => in_array($status, ['disetujui', 'selesai', 'ditolak']) ? null : null,
-                'catatan'     => $status === 'ditolak' ? 'Rekening tidak sesuai nama nasabah.' : null,
-            ]);
+                /*
+                 * Id wilayah penyedia ongkir. Tanpa ini produk tidak bisa
+                 * masuk keranjang sama sekali, toko tanpa titik asal
+                 * tidak bisa dihitung ongkirnya.
+                 *
+                 * PERIKSA SEBELUM DEMO: id ini milik RajaOngkir dan bisa
+                 * berubah. Cara memastikannya ada di AKUN-DEMO.md.
+                 */
+                'destination_id' => 16_374,
+                'alamat_asal' => 'SARDONOHARJO, NGAGLIK, SLEMAN, DI YOGYAKARTA, 55581',
 
-            if (in_array($status, ['disetujui', 'selesai'])) {
-                $this->wallet($warga, -$jumlah, 'penarikan', $w, 'Penarikan saldo #' . $w->id);
+                'status' => StatusUmkm::Aktif,
+                'is_verified' => true,
+            ],
+        );
+
+        $this->akun('umkm.sleman@resikita.id', 'Endang Kusumawati', RoleEnum::Umkm, [
+            'umkm_id' => $rumahDaur->id,
+            'wilayah_id' => $sleman->id,
+            'phone' => '081277770001',
+        ]);
+
+        $this->semaiProduk($rumahDaur, $kategori, [
+            ['Tas Anyam Sachet Motif Parang', 'tas-dan-dompet', 'Kemasan sachet bekas', 85_000, 12, 450],
+            ['Dompet Kain Perca Batik', 'tas-dan-dompet', 'Kain perca konveksi', 45_000, 24, 180],
+            ['Pot Gantung Botol PET', 'pot-dan-berkebun', 'Botol PET bekas', 25_000, 40, 220],
+            ['Keranjang Koran Gulung', 'kerajinan', 'Koran bekas', 65_000, 8, 600],
+            ['Tikar Lipat Sachet', 'perabot-rumah', 'Kemasan sachet bekas', 120_000, 6, 900],
+        ]);
+
+        // ---- 2. Aktif, Badung ----------------------------------------
+        $kriyaMengwi = $this->umkm(
+            'Kriya Sampah Mengwi',
+            [
+                'deskripsi' => 'Kelompok perajin Mengwi yang mengubah botol kaca, ban dalam bekas, dan serbuk kayu menjadi dekorasi dan perabot.',
+                'alamat' => 'Banjar Pandean, Jalan Raya Mengwi Nomor 45, Mengwi',
+                'latitude' => -8.5530,
+                'longitude' => 115.1680,
+                'phone' => '081277770002',
+                'email' => 'kriya@sampahmengwi.id',
+                'wilayah_id' => $badung->id,
+
+                // PERIKSA SEBELUM DEMO, lihat catatan pada toko di atas.
+                'destination_id' => 17_473,
+                'alamat_asal' => 'KEROBOKAN KELOD, KUTA UTARA, BADUNG, BALI, 80361',
+
+                'status' => StatusUmkm::Aktif,
+                'is_verified' => true,
+            ],
+        );
+
+        $this->akun('umkm.badung@resikita.id', 'I Putu Gede Ardana', RoleEnum::Umkm, [
+            'umkm_id' => $kriyaMengwi->id,
+            'wilayah_id' => $badung->id,
+            'phone' => '081277770002',
+        ]);
+
+        $this->semaiProduk($kriyaMengwi, $kategori, [
+            ['Lampu Meja Botol Kaca', 'dekorasi', 'Botol kaca bekas', 145_000, 10, 1_200],
+            ['Pot Tanaman Ban Bekas', 'pot-dan-berkebun', 'Ban dalam bekas', 55_000, 18, 1_500],
+            ['Jam Dinding Serbuk Kayu', 'dekorasi', 'Serbuk gergaji', 95_000, 7, 700],
+            ['Kompos Padat 5 Kilogram', 'kompos-dan-pupuk', 'Sampah organik pasar', 30_000, 50, 5_000],
+        ]);
+
+        // ---- 3. Menunggu verifikasi ----------------------------------
+        // Sengaja tanpa produk: toko yang belum lolos memang belum bisa
+        // mengunggah apa pun, dan panel penjualnya masih tertutup.
+        $anyamanSikka = $this->umkm(
+            'Anyaman Bambu Sikka',
+            [
+                'deskripsi' => 'Kelompok ibu-ibu Kota Uneng yang menganyam bambu dan daun lontar menjadi wadah pengganti kantong plastik.',
+                'alamat' => 'Jalan Nairoa, Kota Uneng, Alok',
+                'latitude' => -8.6200,
+                'longitude' => 122.2100,
+                'phone' => '081277770003',
+                'email' => 'anyaman@bambusikka.id',
+                'wilayah_id' => $sikka->id,
+
+                'status' => StatusUmkm::Menunggu,
+                'is_verified' => false,
+            ],
+        );
+
+        $this->akun('umkm.sikka@resikita.id', 'Maria Fatima Wangge', RoleEnum::Umkm, [
+            'umkm_id' => $anyamanSikka->id,
+            'wilayah_id' => $sikka->id,
+            'phone' => '081277770003',
+        ]);
+
+        // ---- 4. Ditolak, menunggu perbaikan --------------------------
+        $kupang = $this->umkm(
+            'Daur Ulang Kupang Mandiri',
+            [
+                'deskripsi' => 'Usaha rumahan pengolahan sampah plastik.',
+                'alamat' => 'Kupang',
+                'phone' => '081277770004',
+                'email' => 'kupangmandiri@contoh.id',
+                'wilayah_id' => $this->wilayah('53.71')?->id,
+            ],
+        );
+
+        $pemilikKupang = $this->akun('umkm.kupang@resikita.id', 'Yohanes Baptista Lado', RoleEnum::Umkm, [
+            'umkm_id' => $kupang->id,
+            'phone' => '081277770004',
+        ]);
+
+        // Penolakan lewat Service, bukan dengan menyetel kolom langsung.
+        // Dengan begitu catatan, jejak peninjau, dan baris notifikasinya
+        // benar-benar terbentuk seperti pada penolakan sungguhan.
+        if (! $kupang->ditolak()) {
+            $admin = User::query()->where('email', 'admin@resikita.id')->first();
+
+            if ($admin !== null) {
+                app(AkunService::class)->tolakUmkm(
+                    $kupang,
+                    $admin,
+                    'Alamat usaha baru terisi "Kupang" saja, sehingga lokasinya tidak bisa dipastikan. '
+                    .'Tuliskan sampai nama jalan dan nomor, lalu lengkapi deskripsi bahan baku yang diolah.',
+                );
             }
         }
+
+        unset($pemilikKupang);
     }
 
-    private function seedOrders(array $masyarakat, array $umkms, array $products): void
+    private function semaiArtikel(): void
     {
-        $byUmkm = collect($products)->groupBy('umkm_id');
+        $kategori = ArtikelKategori::query()->pluck('id', 'slug');
+        $penulis = User::query()->where('email', 'admin@resikita.id')->value('id');
+        $teksBaca = app(TeksBacaService::class);
 
-        for ($i = 0; $i < 20; $i++) {
-            $umkm = $this->faker->randomElement($umkms);
-            $daftarProduk = $byUmkm->get($umkm->id);
-            if (! $daftarProduk || $daftarProduk->isEmpty()) {
-                continue;
-            }
-            $buyer = $this->faker->randomElement($masyarakat);
-
-            $pilih = $daftarProduk->random($this->faker->numberBetween(1, min(3, $daftarProduk->count())));
-            $ongkir = $this->faker->randomElement([10000, 15000, 20000]);
-            $subtotal = 0;
-            $rows = [];
-            foreach ($pilih as $p) {
-                $qty = $this->faker->numberBetween(1, 3);
-                $sub = $qty * (float) $p->harga;
-                $subtotal += $sub;
-                $rows[] = ['product' => $p, 'qty' => $qty, 'sub' => $sub];
-            }
-            $total = $subtotal + $ongkir;
-
-            $metode = $this->faker->randomElement(['saldo', 'midtrans']);
-            $status = $this->faker->randomElement(['menunggu_bayar', 'dibayar', 'dikemas', 'dikirim', 'selesai', 'selesai']);
-            $dibayar = $status !== 'menunggu_bayar';
-
-            // Bila bayar saldo tapi saldo kurang, jadikan menunggu_bayar
-            if ($metode === 'saldo' && $dibayar && ($this->saldo[$buyer->id] ?? 0) < $total) {
-                $status = 'menunggu_bayar';
-                $dibayar = false;
-            }
-
-            $order = Order::create([
-                'user_id'        => $buyer->id,
-                'umkm_id'        => $umkm->id,
-                'total'          => $total,
-                'ongkir'         => $ongkir,
-                'metode_bayar'   => $metode,
-                'status'         => $status,
-                'alamat_kirim'   => $this->faker->address(),
-                'destination_id' => $this->faker->numberBetween(1000, 9999),
-                'kurir'          => in_array($status, ['dikirim', 'selesai']) ? $this->faker->randomElement(['jne', 'sicepat', 'anteraja']) : null,
-                'no_resi'        => in_array($status, ['dikirim', 'selesai']) ? strtoupper($this->faker->bothify('??########')) : null,
-            ]);
-
-            foreach ($rows as $r) {
-                OrderItem::create([
-                    'order_id'       => $order->id,
-                    'product_id'     => $r['product']->id,
-                    'nama_snapshot'  => $r['product']->nama,
-                    'harga_snapshot' => $r['product']->harga,
-                    'qty'            => $r['qty'],
-                    'subtotal'       => $r['sub'],
-                ]);
-            }
-
-            Payment::create([
-                'payable_type'            => $order->getMorphClass(),
-                'payable_id'              => $order->id,
-                'metode'                  => $metode,
-                'midtrans_order_id'       => $metode === 'midtrans' ? 'ORD-' . $order->id . '-' . Str::upper(Str::random(6)) : null,
-                'midtrans_transaction_id' => $metode === 'midtrans' && $dibayar ? (string) Str::uuid() : null,
-                'amount'                  => $total,
-                'status'                  => $dibayar ? 'paid' : 'pending',
-                'paid_at'                 => $dibayar ? now()->subDays($this->faker->numberBetween(0, 20)) : null,
-            ]);
-
-            if ($dibayar && $metode === 'saldo') {
-                $this->wallet($buyer, -$total, 'belanja', $order, 'Belanja di ' . $umkm->nama);
-            }
-        }
-    }
-
-    private function seedReports(array $masyarakat, array $petugasLapangan, array $banjars): void
-    {
-        $kategori = ReportCategory::pluck('id')->all();
-        $judulContoh = [
-            'Tumpukan sampah di pinggir jalan', 'Pembakaran sampah dekat permukiman',
-            'Saluran got tersumbat sampah plastik', 'Sampah berserakan di pantai',
-            'TPS melebihi kapasitas', 'Pembuangan sampah liar di lahan kosong',
+        $daftar = [
+            [
+                'Memilah Sampah Rumah Tangga Mulai dari Dapur',
+                'pemilahan',
+                TipeArtikel::Panduan,
+                "Pemilahan yang berhasil hampir selalu dimulai dari satu titik: dapur.\n\n".
+                "Sediakan dua wadah berdampingan. Satu untuk sisa makanan dan kulit buah, satu lagi untuk kemasan kering yang sudah dibilas. Dua wadah sudah cukup untuk memulai; menambah wadah ketiga sebelum kebiasaan terbentuk justru membuat orang menyerah.\n\n".
+                "Bilas kemasan sebelum dikumpulkan. Sisa kuah atau minyak membuat kertas dan plastik kehilangan nilai jualnya di bank sampah, dan sering membuat seluruh kantong ditolak.\n\n".
+                'Setelah dua pekan, tambahkan wadah khusus untuk baterai, lampu, dan obat kedaluwarsa. Simpan tertutup dan jangan pernah dicampur dengan sampah harian.',
+            ],
+            [
+                'Mengompos di Rumah Tanpa Halaman Luas',
+                'kompos',
+                TipeArtikel::Tutorial,
+                "Kompos tidak menuntut kebun. Ember bekas cat berukuran dua puluh liter sudah cukup untuk satu rumah tangga kecil.\n\n".
+                "Lubangi bagian bawah dan sisi ember untuk sirkulasi udara. Isi bergantian: satu lapis sisa dapur, satu lapis bahan kering seperti daun atau serbuk gergaji.\n\n".
+                "Aduk seminggu sekali. Bau asam berarti terlalu basah, tambahkan bahan kering. Kompos matang dalam enam sampai delapan pekan, berwarna gelap dan berbau tanah.\n\n".
+                'Yang tidak boleh masuk: daging, tulang, minyak, dan kotoran hewan peliharaan.',
+            ],
+            [
+                'Apa yang Terjadi pada Sampah Anda Setelah Disetor ke Bank Sampah',
+                'bank-sampah',
+                TipeArtikel::Artikel,
+                "Banyak orang berhenti bertanya setelah menerima saldo. Padahal perjalanan sampahnya baru dimulai.\n\n".
+                "Di bank sampah, setoran ditimbang per jenis dan dicatat dengan harga yang berlaku hari itu. Harga berbeda antar unit dan berubah mengikuti pasar pengepul.\n\n".
+                "Anorganik bernilai kemudian dikirim ke pengepul lalu ke pabrik daur ulang. Botol PET menjadi serat poliester, kardus menjadi kertas daur ulang, aluminium dilebur berulang kali nyaris tanpa kehilangan mutu.\n\n".
+                'Yang tidak terserap aliran itu berakhir di TPA. Karena itu memilah lebih dalam bukan sekadar kerapian, ia menentukan berapa banyak yang benar-benar selamat.',
+            ],
+            [
+                'Limbah B3 Rumah Tangga: Yang Kecil tapi Paling Berbahaya',
+                'limbah-b3',
+                TipeArtikel::Panduan,
+                "Baterai, lampu neon, sisa cat, obat kedaluwarsa, dan kemasan pestisida masuk kategori bahan berbahaya dan beracun.\n\n".
+                "Jumlahnya kecil, tapi satu baterai bocor mencemari tanah dalam radius yang jauh lebih luas daripada ukurannya.\n\n".
+                "Simpan terpisah dalam wadah tertutup dan berlabel. Jangan pernah dibakar, jangan dicampur sampah harian, dan jangan dibuang ke saluran air.\n\n".
+                'Serahkan ke fasilitas penampungan limbah B3 atau tanyakan titik pengumpulan ke dinas lingkungan hidup setempat.',
+            ],
+            [
+                'Membaca Aturan Sampah: Undang-Undang 18 Tahun 2008 dalam Bahasa Sehari-hari',
+                'regulasi',
+                TipeArtikel::Artikel,
+                "Undang-Undang Nomor 18 Tahun 2008 menempatkan pengelolaan sampah sebagai urusan wajib pemerintah kabupaten dan kota. Itu sebabnya laporan warga di Resikita diteruskan lebih dulu ke tingkat kabupaten.\n\n".
+                "Undang-undang yang sama memperkenalkan asas tanggung jawab produsen: yang membuat kemasan ikut bertanggung jawab atas nasib kemasannya.\n\n".
+                "Peraturan Pemerintah Nomor 81 Tahun 2012 kemudian mengatur pengurangan dan penanganan sampah rumah tangga, sementara Peraturan Presiden Nomor 97 Tahun 2017 menetapkan sasaran nasionalnya.\n\n".
+                'Yang perlu diingat warga cukup satu hal: memilah bukan kebaikan sukarela semata, melainkan bagian dari kewajiban yang sudah punya dasar hukum.',
+            ],
+            [
+                'Ekonomi Sirkular Bukan Sekadar Daur Ulang',
+                'ekonomi-sirkular',
+                TipeArtikel::Artikel,
+                "Daur ulang sering dianggap puncak dari pengelolaan sampah. Padahal dalam ekonomi sirkular ia justru langkah terakhir sebelum menyerah.\n\n".
+                "Urutannya: menolak yang tidak perlu, mengurangi yang dipakai, memakai ulang selama mungkin, baru mendaur ulang sisanya.\n\n".
+                "Sebuah gelas yang dipakai ulang seratus kali menghemat jauh lebih banyak daripada seratus gelas sekali pakai yang semuanya berhasil didaur ulang.\n\n".
+                'Karena itu bank sampah dan UMKM daur ulang tidak berdiri sendiri. Keduanya menahan bahan tetap berputar di dalam ekonomi, bukan sekadar memindahkannya ke tempat lain.',
+            ],
+            [
+                'Memilih Bank Sampah yang Tepat di Sekitar Rumah',
+                'bank-sampah',
+                TipeArtikel::Panduan,
+                "Tidak semua bank sampah menerima jenis yang sama, dan harganya pun berbeda antar unit.\n\n".
+                "Sebelum menyetor, tanyakan tiga hal: jenis apa saja yang diterima, bagaimana cara penimbangan dicatat, dan kapan saldo bisa ditarik.\n\n".
+                "Unit yang baik menimbang di depan nasabah dan mencatat per jenis, bukan menaksir keseluruhan kantong.\n\n".
+                'Di Resikita, katalog harga tiap unit terbuka untuk dilihat sebelum Anda datang. Bandingkan lebih dulu, terutama untuk jenis yang Anda kumpulkan paling banyak.',
+            ],
+            [
+                'Mengurangi Plastik Sekali Pakai Tanpa Merepotkan Diri Sendiri',
+                'daur-ulang',
+                TipeArtikel::Tutorial,
+                "Perubahan yang bertahan hampir selalu yang paling sedikit menuntut.\n\n".
+                "Mulai dari satu benda yang paling sering Anda pakai. Bagi kebanyakan orang itu kantong belanja, botol minum, atau wadah makan.\n\n".
+                "Simpan penggantinya di tempat yang tidak bisa dilewatkan: tas kerja, jok motor, atau dekat kunci rumah. Niat baik kalah oleh lupa, dan lupa dikalahkan oleh penempatan.\n\n".
+                'Setelah satu kebiasaan berjalan sebulan penuh, baru tambahkan yang kedua.',
+            ],
         ];
 
-        for ($i = 0; $i < 18; $i++) {
-            $pelapor = $this->faker->randomElement($masyarakat);
-            $b = $this->faker->randomElement($banjars);
-            $c = $this->coord();
-            $status = $this->faker->randomElement(['menunggu', 'diverifikasi', 'ditugaskan', 'proses', 'selesai', 'ditolak']);
+        foreach ($daftar as $i => [$judul, $slugKategori, $tipe, $konten]) {
+            $artikel = Artikel::firstOrNew(['slug' => Str::slug($judul)]);
 
-            $report = Report::create([
-                'pelapor_id'  => $pelapor->id,
-                'kategori_id' => $this->faker->randomElement($kategori),
-                'tiket_no'    => 'RPT-' . now()->format('Ym') . '-' . str_pad((string) ($i + 1), 4, '0', STR_PAD_LEFT),
-                'judul'       => $this->faker->randomElement($judulContoh),
-                'deskripsi'   => $this->faker->paragraph(3),
-                'lat'         => $c['lat'],
-                'lng'         => $c['lng'],
-                'alamat'      => $this->faker->address(),
-                'banjar_id'   => $b->id,
-                'status'      => $status,
-                'is_duplikat' => false,
-                'verified_by' => in_array($status, ['diverifikasi', 'ditugaskan', 'proses', 'selesai']) ? null : null,
-                'created_at'  => now()->subDays($this->faker->numberBetween(0, 60)),
+            $artikel->fill([
+                'penulis_id' => $penulis,
+                'kategori_id' => $kategori[$slugKategori] ?? null,
+                'tipe' => $tipe,
+                'judul' => $judul,
+                'konten' => $konten,
+                'status' => StatusArtikel::Published,
+                'is_unggulan' => $i < 3,
+                'dilihat' => (8 - $i) * 37,
+                'didengarkan' => (8 - $i) * 6,
+                'published_at' => now()->subDays(40 - $i * 5),
             ]);
 
-            if (in_array($status, ['ditugaskan', 'proses', 'selesai'])) {
-                $petugas = $this->faker->randomElement($petugasLapangan);
-                ReportAssignment::create([
-                    'report_id'   => $report->id,
-                    'petugas_id'  => $petugas->id,
-                    'assigned_by' => null,
-                    'status'      => $status === 'selesai' ? 'selesai' : ($status === 'proses' ? 'dikerjakan' : 'ditugaskan'),
-                    'assigned_at' => now()->subDays($this->faker->numberBetween(0, 30)),
-                ]);
-
-                if (in_array($status, ['proses', 'selesai'])) {
-                    ReportProgress::create([
-                        'report_id'       => $report->id,
-                        'petugas_id'      => $petugas->id,
-                        'catatan'         => $status === 'selesai' ? 'Sampah sudah diangkut dan area dibersihkan.' : 'Sedang dalam penanganan.',
-                        'foto_bukti'      => 'reports/bukti-' . $this->faker->numberBetween(1, 6) . '.jpg',
-                        'status_progress' => $status === 'selesai' ? 'selesai' : 'dikerjakan',
-                        'lat'             => $c['lat'],
-                        'lng'             => $c['lng'],
-                    ]);
-                }
-            }
+            // teks_baca selalu lewat Service, tidak pernah diketik
+            // manual, web dan mobile harus membacakan kalimat yang sama.
+            $teksBaca->siapkan($artikel);
+            $artikel->save();
         }
     }
 
-    private function seedMisc(array $masyarakat): void
+    /**
+     * Laporan beserta daur hidupnya, bukan hanya baris berstatus baru.
+     *
+     * Panel pemerintah daerah baru terasa benar kalau setiap kolom
+     * statusnya punya isi, dan waktu respons hanya bisa dihitung dari
+     * laporan yang benar-benar pernah selesai.
+     */
+    private function semaiLaporan(Wilayah $badung, Wilayah $sikka): void
     {
-        // Klasifikasi AI
-        $jenis = ['Botol Plastik PET', 'Kardus', 'Kaleng Aluminium', 'Organik', 'Kaca'];
-        for ($i = 0; $i < 12; $i++) {
-            $u = $this->faker->randomElement($masyarakat);
-            WasteClassification::create([
-                'user_id'                 => $u->id,
-                'image_path'              => 'classifications/sample-' . $this->faker->numberBetween(1, 10) . '.jpg',
-                'hasil_jenis'             => $this->faker->randomElement($jenis),
-                'kategori'                => $this->faker->randomElement(['Anorganik', 'Organik', 'B3']),
-                'confidence'             => $this->faker->randomFloat(3, 0.6, 0.99),
-                'langkah_pengolahan'      => ['Bersihkan', 'Keringkan', 'Pilah sesuai jenis', 'Setor ke bank sampah'],
-                'rekomendasi_daur_ulang'  => $this->faker->sentence(12),
-                'raw_response'            => ['label' => 'sample', 'score' => 0.9],
-            ]);
+        $kategori = LaporanKategori::query()->aktif()->orderBy('id')->get();
+
+        $pelaporBadung = User::query()
+            ->whereIn('email', [
+                'warga.kadek@resikita.id',
+                'warga.wayan@resikita.id',
+                'warga.komang@resikita.id',
+            ])
+            ->get();
+
+        $pelaporSikka = User::query()->where('email', 'warga.maria@resikita.id')->first();
+
+        if ($kategori->isEmpty() || $pelaporBadung->isEmpty() || $pelaporSikka === null) {
+            $this->command?->warn('Prasyarat laporan belum lengkap, penyemaian laporan dilewati.');
+
+            return;
         }
 
-        // Artikel edukasi
-        $penulis = User::role('admin_dinas')->first() ?? User::role('admin')->first();
-        $judulArtikel = [
-            'Mengenal Ekonomi Sirkular Sampah', 'Cara Memilah Sampah Rumah Tangga',
-            'Manfaat Bank Sampah bagi Warga', 'Panduan Setor Sampah di Niti Resik',
-            'Sad Kerthi & Pengelolaan Lingkungan', 'Tips Mengurangi Sampah Plastik',
+        $service = app(LaporanService::class);
+        $adminKab = User::query()->where('email', 'kabupaten.badung@resikita.id')->first();
+        $petugas1 = User::query()->where('email', 'petugas.badung1@resikita.id')->first();
+        $petugas2 = User::query()->where('email', 'petugas.badung2@resikita.id')->first();
+
+        /*
+         * Titik-titik di Badung sengaja dijauhkan lebih dari lima puluh
+         * meter satu sama lain. Deteksi duplikat memakai radius itu, dan
+         * demo yang seluruh laporannya saling dianggap duplikat akan
+         * menyesatkan saat diperagakan.
+         */
+        $badungLaporan = [
+            ['baru', -8.5545, 115.1695, 'Tumpukan sampah di bahu jalan Mengwi', 'Sudah menumpuk sekitar seminggu dan mulai berbau menyengat saat siang.', SumberInput::Ketik],
+            ['baru', -8.7895, 115.1655, 'Sampah dibakar tiap sore di Jimbaran', 'Asapnya masuk ke rumah warga dan mengganggu anak-anak.', SumberInput::Suara],
+            ['diverifikasi', -8.5905, 115.1855, 'Saluran air tersumbat sampah di Sempidi', 'Air tidak mengalir dan mulai menggenang setiap kali hujan turun.', SumberInput::Ketik],
+            ['ditugaskan', -8.7185, 115.1695, 'TPS penuh belum terangkut di Kuta', 'Sampah meluber sampai ke bahu jalan sejak tiga hari lalu.', SumberInput::Ketik],
+            ['dikerjakan', -8.6895, 115.1655, 'Sampah menumpuk di depan sekolah Seminyak', 'Menumpuk sejak libur panjang dan belum ada petugas yang datang.', SumberInput::Ketik],
+            ['selesai', -8.5975, 115.1905, 'Bangkai kasur dibuang di lahan kosong Lukluk', 'Sudah dua pekan dibiarkan dan mulai menjadi sarang nyamuk.', SumberInput::Suara],
         ];
-        foreach ($judulArtikel as $i => $judul) {
-            Article::create([
-                'author_id'    => $penulis?->id,
-                'tipe'         => $this->faker->randomElement(['artikel', 'panduan', 'tutorial']),
-                'judul'        => $judul,
-                'slug'         => Str::slug($judul) . '-' . ($i + 1),
-                'konten'       => $this->faker->paragraphs(5, true),
-                'status'       => 'published',
-                'published_at' => now()->subDays($this->faker->numberBetween(1, 120)),
+
+        foreach ($badungLaporan as $i => [$target, $lat, $lng, $judul, $deskripsi, $sumber]) {
+            $laporan = $service->buat($pelaporBadung[$i % $pelaporBadung->count()], [
+                'kategori_id' => $kategori[$i % $kategori->count()]->id,
+                'judul' => $judul,
+                'deskripsi' => $deskripsi,
+                'latitude' => $lat,
+                'longitude' => $lng,
+                'deskripsi_sumber' => $sumber,
+            ]);
+
+            $this->majukanLaporan($laporan, $target, $service, $adminKab, $i % 2 === 0 ? $petugas1 : $petugas2);
+        }
+
+        // Wilayah belum terjangkau, masuk ke papan fasilitator dan
+        // menaikkan skor prioritas perluasan wilayah.
+        $sikkaLaporan = [
+            [-8.6205, 122.2055, 'Sampah menumpuk di tepi pantai Kota Uneng', 'Sampah plastik terdampar sepanjang pantai dan belum ada yang membersihkan.', SumberInput::Suara],
+            [-8.6255, 122.2155, 'Pembakaran sampah di dekat sekolah Kota Baru', 'Dilakukan hampir setiap pagi saat anak-anak berangkat sekolah.', SumberInput::Ketik],
+            [-8.6155, 122.1955, 'Tidak ada TPS di Wailiti', 'Warga membuang ke kebun kosong karena tidak ada tempat resmi.', SumberInput::Ketik],
+        ];
+
+        foreach ($sikkaLaporan as $i => [$lat, $lng, $judul, $deskripsi, $sumber]) {
+            $service->buat($pelaporSikka, [
+                'kategori_id' => $kategori[($i + 2) % $kategori->count()]->id,
+                'judul' => $judul,
+                'deskripsi' => $deskripsi,
+                'latitude' => $lat,
+                'longitude' => $lng,
+                'deskripsi_sumber' => $sumber,
             ]);
         }
 
-        // Notifikasi in-app
-        foreach (collect($masyarakat)->random(20) as $u) {
-            Notification::create([
-                'user_id' => $u->id,
-                'tipe'    => 'setor_sampah',
-                'channel' => 'inapp',
-                'pesan'   => 'Saldo Anda bertambah dari setoran sampah terbaru.',
-                'status'  => $this->faker->randomElement(['terkirim', 'dibaca']),
-                'read_at' => $this->faker->boolean(50) ? now() : null,
-            ]);
+        $this->semaiTindakLanjut();
+
+        unset($sikka);
+    }
+
+    /** Jalankan satu laporan sampai status yang diinginkan. */
+    private function majukanLaporan(
+        Laporan $laporan,
+        string $target,
+        LaporanService $service,
+        ?User $adminKab,
+        ?User $petugas,
+    ): void {
+        if ($target === 'baru' || $adminKab === null) {
+            return;
         }
+
+        $service->verifikasi($laporan, $adminKab);
+        $laporan->refresh();
+
+        if ($target === 'diverifikasi' || $petugas === null) {
+            return;
+        }
+
+        $service->tugaskan($laporan, $petugas, $adminKab, 'Mohon ditinjau dan ditangani sesuai prosedur.');
+        $laporan->refresh();
+
+        if ($target === 'ditugaskan') {
+            return;
+        }
+
+        $service->catatProgres($laporan, $petugas, [
+            'catatan' => 'Sudah tiba di lokasi dan mulai pengangkutan bersama dua orang rekan.',
+            'status_progres' => StatusProgres::Dikerjakan,
+            'latitude' => $laporan->latitude,
+            'longitude' => $laporan->longitude,
+        ]);
+        $laporan->refresh();
+
+        if ($target === 'dikerjakan') {
+            return;
+        }
+
+        /*
+         * Foto bukti wajib saat menyelesaikan, ditegakkan di Service.
+         * Berkasnya sendiri tidak ikut disemai; yang tersimpan hanya
+         * path-nya. Cara menaruh berkas contohnya ada di AKUN-DEMO.md.
+         */
+        $service->catatProgres($laporan, $petugas, [
+            'catatan' => 'Lokasi sudah bersih. Warga sekitar diminta tidak membuang di titik ini lagi.',
+            'foto_bukti' => 'laporan/bukti/contoh-bukti-selesai.jpg',
+            'status_progres' => StatusProgres::Selesai,
+            'latitude' => $laporan->latitude,
+            'longitude' => $laporan->longitude,
+        ]);
+    }
+
+    private function semaiTindakLanjut(): void
+    {
+        $fasilitator = User::query()->where('email', 'fasilitator@resikita.id')->first();
+
+        if ($fasilitator === null) {
+            return;
+        }
+
+        // Hanya laporan dari wilayah belum terjangkau yang boleh dicatat
+        // tindak lanjutnya, ditegakkan TindakLanjutService.
+        $laporan = Laporan::query()
+            ->where('alasan_routing', AlasanRouting::WilayahBelumTerjangkau)
+            ->orderBy('id')
+            ->first();
+
+        if ($laporan === null || $laporan->tindakLanjut()->exists()) {
+            return;
+        }
+
+        app(TindakLanjutService::class)->catat($laporan, $fasilitator, [
+            'nama_dinas' => 'Dinas Lingkungan Hidup Kabupaten Sikka',
+            'kontak_dinas' => 'dlh@sikkakab.go.id',
+            'tanggal_kontak' => now()->subDays(4)->toDateString(),
+            'hasil' => 'Sudah dihubungi lewat surel dan telepon. Dinas menyatakan akan menjadwalkan '
+                .'pembersihan pantai bersama kelompok masyarakat, dan menanyakan cara bergabung '
+                .'dengan Resikita agar laporan warga masuk langsung ke mereka.',
+        ]);
+    }
+
+    /**
+     * Satu pengajuan wilayah yang masih menunggu tinjauan super admin.
+     *
+     * Tanpa ini, halaman verifikasi pengajuan wilayah tampil kosong dan
+     * fitur yang paling menentukan cakupan nasional produk ini justru
+     * tidak bisa diperagakan.
+     */
+    private function semaiPengajuanWilayah(Wilayah $sikka): void
+    {
+        PengajuanWilayah::updateOrCreate(
+            ['wilayah_id' => $sikka->id, 'pemohon_email' => 'dlh@sikkakab.go.id'],
+            [
+                'pemohon_nama' => 'Yohanes Don Bosco Wangge',
+                'pemohon_jabatan' => 'Kepala Dinas Lingkungan Hidup',
+                'pemohon_phone' => '081288880001',
+                'instansi' => 'Dinas Lingkungan Hidup Kabupaten Sikka',
+
+                // Berkas suratnya tidak ikut disemai; lihat AKUN-DEMO.md
+                // untuk cara menaruh contoh berkasnya di disk privat.
+                'surat_path' => 'pengajuan-wilayah/contoh-surat-sikka.pdf',
+                'status' => StatusPengajuanWilayah::Diajukan,
+            ],
+        );
+
+        $sikka->update(['status_registrasi' => StatusRegistrasiWilayah::Diajukan]);
+    }
+
+    // ----------------------------------------------------------------
+    // Pembantu
+    // ----------------------------------------------------------------
+
+    private function wilayah(string $kode): ?Wilayah
+    {
+        return Wilayah::query()->where('kode', $kode)->first();
+    }
+
+    private function verifikasi(Wilayah $wilayah): void
+    {
+        $wilayah->update([
+            'status_registrasi' => StatusRegistrasiWilayah::Terverifikasi,
+            'terverifikasi_at' => now(),
+        ]);
+    }
+
+    /** @param array<string, mixed> $atribut */
+    private function umkm(string $nama, array $atribut): Umkm
+    {
+        $umkm = Umkm::firstOrCreate(['nama' => $nama], $atribut);
+
+        // Seluruh atribut dikembalikan ke keadaan yang dituju pada setiap
+        // penjalanan, termasuk statusnya. Seeder demo memang harus bisa
+        // mengembalikan basis data ke titik awal yang sama, toko yang
+        // sengaja dibiarkan menunggu tidak boleh tetap aktif hanya karena
+        // pernah disetujui saat peragaan sebelumnya.
+        //
+        // Toko yang statusnya ditetapkan lewat Service, yang ditolak,
+        // sengaja tidak menyertakan `status` di sini.
+        $umkm->fill($atribut)->save();
+
+        UmkmDompet::firstOrCreate(['umkm_id' => $umkm->id], ['saldo' => 0]);
+
+        return $umkm->fresh();
+    }
+
+    /**
+     * @param  Collection<string, int>  $kategori
+     * @param  array<int, array{0: string, 1: string, 2: string, 3: int, 4: int, 5: int}>  $daftar
+     */
+    private function semaiProduk(Umkm $umkm, $kategori, array $daftar): void
+    {
+        if ($kategori->isEmpty()) {
+            return;
+        }
+
+        foreach ($daftar as [$nama, $slugKategori, $bahan, $harga, $stok, $berat]) {
+            Produk::updateOrCreate(
+                ['slug' => Str::slug($nama)],
+                [
+                    'umkm_id' => $umkm->id,
+                    'kategori_id' => $kategori[$slugKategori] ?? $kategori->first(),
+                    'nama' => $nama,
+                    'deskripsi' => "Dibuat tangan dari {$bahan}. Setiap unit sedikit berbeda karena bahannya memang tidak seragam.",
+                    'bahan_baku' => $bahan,
+                    'harga' => $harga,
+                    'stok' => $stok,
+                    'berat_gram' => $berat,
+                    'is_active' => true,
+                ],
+            );
+        }
+    }
+
+    /** @param array<string, mixed> $atribut */
+    private function akun(string $email, string $nama, RoleEnum $role, array $atribut = []): User
+    {
+        $user = User::firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => $nama,
+                'password' => Hash::make(self::KATA_SANDI),
+                'kode_qr' => (string) Str::ulid(),
+                'is_active' => true,
+                'email_verified_at' => now(),
+                ...$atribut,
+            ],
+        );
+
+        // Atribut keterkaitan diperbarui juga pada akun yang sudah ada,
+        // supaya menjalankan ulang seeder memperbaiki data yang telanjur
+        // menyimpang alih-alih membiarkannya.
+        if ($atribut !== []) {
+            $user->fill($atribut)->save();
+        }
+
+        if (! $user->hasRole($role->value)) {
+            $user->syncRoles([$role->value]);
+        }
+
+        Dompet::firstOrCreate(['user_id' => $user->id], ['saldo' => 0]);
+
+        return $user->fresh();
     }
 }

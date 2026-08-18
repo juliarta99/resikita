@@ -1,83 +1,62 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Admin;
 
-use App\Models\BankSampah;
-use App\Models\BanjarDinas;
-use App\Models\Kecamatan;
-use App\Models\Report;
-use App\Models\Tps;
+use App\Enums\StatusLaporan;
+use App\Enums\StatusPenarikan;
+use App\Enums\StatusPengajuanWilayah;
+use App\Enums\StatusUmkm;
+use App\Models\Laporan;
+use App\Models\PenarikanSaldo;
+use App\Models\PengajuanWilayah;
 use App\Models\Umkm;
+use App\Models\UmkmPenarikan;
 use App\Models\User;
-use App\Models\WasteDeposit;
-use App\Models\Withdrawal;
-use Livewire\Attributes\Layout;
+use App\Models\Wilayah;
+use App\Services\Analitik\AnalitikService;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Layout('components.layouts.app')]
+/**
+ * Dasbor platform.
+ *
+ * Berbeda dari dasbor pemerintahan: yang diukur di sini bukan kinerja
+ * satu daerah, melainkan kesehatan sistem secara keseluruhan, berapa
+ * wilayah yang sudah bergabung, berapa antrean persetujuan yang
+ * menumpuk, dan seberapa jauh fitur suara benar-benar dipakai.
+ *
+ * Angka fitur suara sengaja ikut. Klaim inklusivitas yang tidak pernah
+ * dihitung hanya akan menjadi kalimat di proposal.
+ */
+#[Title('Dasbor Platform')]
 class Dashboard extends Component
 {
-    private function markers(): array
+    public function render(AnalitikService $analitik)
     {
-        $out = [];
-        foreach (Tps::whereNotNull('lat')->whereNotNull('lng')->get() as $t) {
-            $out[] = ['t' => 'tps', 'n' => $t->nama, 'lat' => (float) $t->lat, 'lng' => (float) $t->lng];
-        }
-        foreach (BankSampah::whereNotNull('lat')->whereNotNull('lng')->get() as $b) {
-            $out[] = ['t' => 'bank_sampah', 'n' => $b->nama, 'lat' => (float) $b->lat, 'lng' => (float) $b->lng];
-        }
-        foreach (Umkm::whereNotNull('lat')->whereNotNull('lng')->get() as $m) {
-            $out[] = ['t' => 'umkm', 'n' => $m->nama, 'lat' => (float) $m->lat, 'lng' => (float) $m->lng];
-        }
-        foreach (Report::whereNotNull('lat')->whereNotNull('lng')->whereNotIn('status', ['selesai', 'ditolak'])->get() as $r) {
-            $out[] = ['t' => 'laporan', 'n' => $r->judul, 'lat' => (float) $r->lat, 'lng' => (float) $r->lng];
-        }
-
-        return $out;
-    }
-
-    private function tren(): array
-    {
-        $labels = [];
-        $data = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $m = now()->subMonths($i);
-            $labels[] = $m->format('M Y');
-            $data[] = (float) WasteDeposit::whereYear('created_at', $m->year)->whereMonth('created_at', $m->month)->sum('total_nilai');
-        }
-
-        return ['labels' => $labels, 'data' => $data];
-    }
-
-    public function render()
-    {
-        $tren = $this->tren();
-
         return view('livewire.admin.dashboard', [
-            'stat' => [
-                'pengguna'   => User::count(),
-                'masyarakat' => User::role('masyarakat')->count(),
-                'kecamatan'  => Kecamatan::count(),
-                'banjar'     => BanjarDinas::count(),
-                'tps'        => Tps::count(),
-                'bankSampah' => BankSampah::count(),
-                'umkm'       => Umkm::where('status', 'aktif')->count(),
-                'setoranBln' => (float) WasteDeposit::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->sum('total_nilai'),
-            ],
-            'perluTindakan' => [
-                'umkmMenunggu'      => Umkm::where('status', 'menunggu')->count(),
-                'penarikanMenunggu' => Withdrawal::where('status', 'menunggu')->count(),
-                'laporanMenunggu'   => Report::where('status', 'menunggu')->count(),
-            ],
-            'trenLabels' => $tren['labels'],
-            'trenData'   => $tren['data'],
-            'lapData'    => [
-                Report::where('status', 'menunggu')->count(),
-                Report::whereIn('status', ['diverifikasi', 'ditugaskan', 'proses'])->count(),
-                Report::where('status', 'selesai')->count(),
-                Report::where('status', 'ditolak')->count(),
-            ],
-            'markers' => $this->markers(),
+            'totalPengguna' => User::query()->count(),
+            'penggunaBaruBulanIni' => User::query()->where('created_at', '>=', now()->startOfMonth())->count(),
+
+            'totalLaporan' => Laporan::query()->count(),
+            'laporanAktif' => Laporan::query()->whereIn('status', StatusLaporan::aktif())->count(),
+
+            'wilayahTerverifikasi' => Wilayah::query()->terverifikasi()->count(),
+            'wilayahMenunggu' => Wilayah::query()->belumTerjangkau()->where('skor_prioritas', '>', 0)->count(),
+
+            // Antrean persetujuan: pekerjaan admin yang paling nyata.
+            'pengajuanMenunggu' => PengajuanWilayah::query()
+                ->where('status', StatusPengajuanWilayah::Diajukan)->count(),
+            'umkmMenunggu' => Umkm::query()->where('status', StatusUmkm::Menunggu)->count(),
+            'penarikanMenunggu' => PenarikanSaldo::query()
+                ->where('status', StatusPenarikan::Menunggu)->count(),
+            'penarikanUmkmMenunggu' => UmkmPenarikan::query()
+                ->where('status', StatusPenarikan::Menunggu)->count(),
+
+            'fiturSuara' => $analitik->pemakaianFiturSuara(),
+
+            'laporanTerbaru' => Laporan::query()->untukDaftar()->latest('id')->limit(6)->get(),
         ]);
     }
 }

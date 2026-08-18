@@ -1,87 +1,114 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Umkm;
 
-use App\Models\UmkmWalletTransaction;
-use App\Models\UmkmWithdrawal;
-use App\Services\Domain\UmkmWalletService;
-use Illuminate\Support\Facades\Auth;
-use Livewire\Attributes\Layout;
+use App\Livewire\Concerns\MemberiUmpanBalik;
+use App\Models\UmkmPenarikan;
+use App\Services\Wallet\PenarikanService;
+use App\Services\Wallet\UmkmDompetService;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-#[Layout('components.layouts.umkm')]
+/**
+ * Saldo dan penarikan UMKM.
+ *
+ * Saldo langsung didebit saat pengajuan dibuat, bukan saat admin
+ * menyetujui. Kalau tidak, penjual bisa mengajukan penarikan penuh
+ * berkali-kali sebelum pengajuan pertamanya diproses. Aturan itu
+ * ditegakkan PenarikanService di dalam satu transaksi basis data.
+ */
+#[Title('Saldo UMKM')]
 class Saldo extends Component
 {
+    use MemberiUmpanBalik;
     use WithPagination;
 
-    public bool $showTarik = false;
-    public $jumlah = '';
-    public string $nama_bank = '';
-    public string $no_rekening = '';
-    public string $atas_nama = '';
+    public bool $formTerbuka = false;
 
-    private function umkmId(): int
-    {
-        return (int) Auth::user()->umkm_id;
-    }
+    public string $jumlah = '';
 
-    public function bukaTarik()
+    public string $namaBank = '';
+
+    public string $noRekening = '';
+
+    public string $atasNama = '';
+
+    public function bukaForm(): void
     {
-        $this->reset('jumlah', 'nama_bank', 'no_rekening', 'atas_nama');
         $this->resetValidation();
-        $this->showTarik = true;
+        $this->reset(['jumlah', 'namaBank', 'noRekening', 'atasNama']);
+
+        $this->atasNama = auth()->user()->umkm?->nama ?? '';
+        $this->formTerbuka = true;
     }
 
-    public function ajukan()
+    /** @return array<string, mixed> */
+    protected function rules(): array
     {
-        $wallet = app(UmkmWalletService::class);
+        return [
+            'jumlah' => ['required', 'integer', 'min:'.config('resikita.dompet.penarikan_minimum')],
+            'namaBank' => ['required', 'string', 'max:100'],
+            'noRekening' => ['required', 'string', 'max:50'],
+            'atasNama' => ['required', 'string', 'max:150'],
+        ];
+    }
 
-        $this->validate([
-            'jumlah'      => 'required|numeric|min:50000',
-            'nama_bank'   => 'required|string|max:60',
-            'no_rekening' => 'required|string|max:60',
-            'atas_nama'   => 'required|string|max:100',
-        ], [], [
-            'nama_bank' => 'nama bank', 'no_rekening' => 'nomor rekening', 'atas_nama' => 'atas nama',
-        ]);
+    /** @return array<string, string> */
+    protected function validationAttributes(): array
+    {
+        return [
+            'jumlah' => 'jumlah penarikan', 'namaBank' => 'nama bank',
+            'noRekening' => 'nomor rekening', 'atasNama' => 'atas nama',
+        ];
+    }
 
-        $umkmId = $this->umkmId();
+    public function ajukan(PenarikanService $service): void
+    {
+        $umkm = auth()->user()->umkm;
 
-        if ($wallet->saldo($umkmId) < (float) $this->jumlah) {
-            $this->addError('jumlah', 'Saldo tidak mencukupi.');
+        if ($umkm === null) {
+            $this->pesanGalat('Akun Anda belum terhubung ke UMKM mana pun.');
+
             return;
         }
 
-        // Cegah pengajuan ganda saat masih menunggu
-        if (UmkmWithdrawal::where('umkm_id', $umkmId)->where('status', 'menunggu')->exists()) {
-            $this->addError('jumlah', 'Masih ada penarikan yang menunggu validasi.');
-            return;
+        $this->validate();
+
+        $hasil = $this->jalankan(
+            fn () => $service->ajukanUmkm($umkm, [
+                'jumlah' => (int) $this->jumlah,
+                'nama_bank' => $this->namaBank,
+                'no_rekening' => $this->noRekening,
+                'atas_nama' => $this->atasNama,
+            ]),
+            'Pengajuan penarikan dikirim. Saldo sudah dipotong dan menunggu persetujuan admin.',
+        );
+
+        if ($hasil !== null) {
+            $this->formTerbuka = false;
         }
-
-        UmkmWithdrawal::create([
-            'umkm_id'     => $umkmId,
-            'jumlah'      => (float) $this->jumlah,
-            'nama_bank'   => $this->nama_bank,
-            'no_rekening' => $this->no_rekening,
-            'atas_nama'   => $this->atas_nama,
-            'status'      => 'menunggu',
-        ]);
-
-        $this->reset('showTarik', 'jumlah', 'nama_bank', 'no_rekening', 'atas_nama');
-        session()->flash('ok', 'Permintaan penarikan diajukan. Menunggu validasi admin.');
     }
 
-    public function render()
+    public function render(UmkmDompetService $dompet)
     {
-        $wallet = app(UmkmWalletService::class);
-        $umkmId = $this->umkmId();
+        $umkm = auth()->user()->umkm;
+
+        if ($umkm === null) {
+            return view('livewire.umkm.saldo', ['umkm' => null]);
+        }
 
         return view('livewire.umkm.saldo', [
-            'saldo'     => $wallet->saldo($umkmId),
-            'transaksi' => UmkmWalletTransaction::whereHas('wallet', fn ($q) => $q->where('umkm_id', $umkmId))
-                ->latest()->paginate(10),
-            'penarikan' => UmkmWithdrawal::where('umkm_id', $umkmId)->latest()->take(10)->get(),
+            'umkm' => $umkm,
+            'saldo' => $dompet->saldo($umkm),
+            'mutasi' => $dompet->mutasi($umkm)->paginate(10, pageName: 'mutasi'),
+            'penarikan' => UmkmPenarikan::query()
+                ->where('umkm_id', $umkm->id)
+                ->latest('id')
+                ->paginate(5, pageName: 'penarikan'),
+            'minimum' => (int) config('resikita.dompet.penarikan_minimum'),
         ]);
     }
 }

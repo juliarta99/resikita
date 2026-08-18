@@ -1,39 +1,55 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
+use App\Enums\Role as RoleEnum;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * Urutannya bukan selera.
+     *
+     * Role harus ada sebelum akun mana pun dibuat, wilayah sebelum akun
+     * pemerintahan menunjuknya, dan master data sebelum laporan demo
+     * memilih kategorinya. Membalik urutan menghasilkan galat kunci asing
+     * yang penyebabnya jauh dari tempat kegagalannya terlihat.
+     */
     public function run(): void
     {
-        // Role wajib dibuat lebih dulu
         $this->call([
             RoleSeeder::class,
+            WilayahSeeder::class,
+            MasterDataSeeder::class,
         ]);
 
-        // Super admin utama
         $superAdmin = User::firstOrCreate(
-            ['email' => 'superadmin@nitiresik.id'],
-            ['name' => 'Super Admin', 'password' => Hash::make('password'), 'is_active' => true]
+            ['email' => 'superadmin@resikita.id'],
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ],
         );
-        $superAdmin->assignRole('super_admin');
 
-        // Data demo lengkap seluruh tabel.
-        //
-        // RealDataSeeder  : wilayah, pejabat, TPS3R, dan bank sampah Kab. Badung
-        //                   berbasis data riil (lihat komentar di dalam berkas).
-        // DemoSeeder      : data acak sepenuhnya — pakai bila butuh dataset
-        //                   generik/besar untuk uji beban.
-        //
-        // Jangan menjalankan keduanya sekaligus: keduanya mengisi tabel yang
-        // sama sehingga wilayah, warga, dan transaksi akan terduplikasi.
-        $this->call([
-            RealDataSeeder::class,
-            // DemoSeeder::class,
-        ]);
+        $superAdmin->assignRole(RoleEnum::SuperAdmin->value);
+
+        /*
+         * Data demo dipisahkan dan tidak pernah ikut di produksi. Kata
+         * sandi seragam yang memudahkan demo adalah persis yang paling
+         * berbahaya kalau sampai tersemai di basis data sungguhan.
+         */
+        if (! app()->isProduction()) {
+            $this->call([
+                DemoSeeder::class,
+                DemoTransaksiSeeder::class,
+                DemoInteraksiSeeder::class,
+            ]);
+        }
     }
 }

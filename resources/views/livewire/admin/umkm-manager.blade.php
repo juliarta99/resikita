@@ -1,165 +1,147 @@
-<div class="mx-auto max-w-5xl space-y-6">
-    <div class="flex items-start justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-semibold text-primary-900">UMKM</h1>
-            <p class="mt-1 text-sm text-gray-500">Kelola UMKM, titik lokasi, dan verifikasi pendaftaran mandiri.</p>
-        </div>
-        <button wire:click="tambah" class="flex-none rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">+ Tambah</button>
+@php use App\Enums\StatusUmkm; @endphp
+
+<div>
+    <x-ui.kepala-halaman
+        judul="Manajemen UMKM"
+        keterangan="Toko produk daur ulang. Verifikasi sebelum berjualan adalah perlindungan bagi pembeli."/>
+
+    <div class="mb-6 grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
+        <x-ui.bidang label="Cari" untuk="cari-umkm">
+            <div class="relative">
+                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <x-ui.ikon nama="cari" class="h-4 w-4"/>
+                </span>
+                <x-ui.isian id="cari-umkm" wire:model.live.debounce.400ms="cari" class="pl-9"
+                            placeholder="Nama toko atau email"/>
+            </div>
+        </x-ui.bidang>
+
+        <x-ui.bidang label="Status" untuk="status-umkm">
+            <x-ui.pilihan id="status-umkm" wire:model.live="status" kosong="Semua status" :opsi="$statusTersedia"/>
+        </x-ui.bidang>
     </div>
 
-    @if (session('ok'))
-        <div class="rounded-xl border border-gray-200 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700">{{ session('ok') }}</div>
-    @endif
-    @if (session('err'))
-        <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{{ session('err') }}</div>
+    @if ($jumlahMenunggu > 0 && $status !== 'menunggu')
+        <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <p class="text-sm text-amber-900">
+                {{ number_format($jumlahMenunggu) }} toko masih menunggu verifikasi.
+                <button type="button" wire:click="$set('status', 'menunggu')" class="font-medium underline">
+                    Lihat antreannya.
+                </button>
+            </p>
+        </div>
     @endif
 
-    @if ($pending->isNotEmpty())
-        <div class="rounded-xl border border-amber-200 bg-amber-50 p-5">
-            <p class="text-sm font-semibold text-amber-800">Menunggu verifikasi ({{ $pending->count() }})</p>
-            <div class="mt-3 space-y-3">
-                @foreach ($pending as $u)
-                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-white px-4 py-3">
-                        <div>
-                            <p class="text-sm font-medium text-primary-900">{{ $u->nama }}</p>
-                            <p class="text-xs text-gray-500">
-                                Pemilik: {{ $u->admins->first()?->name ?? '—' }} · {{ $u->admins->first()?->email ?? '—' }}
-                                @if ($u->no_hp) · {{ $u->no_hp }} @endif
+    @if ($daftar->isEmpty())
+        <x-ui.kartu>
+            <x-ui.kosong ikon="toko" judul="Tidak ada UMKM"
+                         pesan="Tidak ada toko yang cocok dengan penyaring ini."/>
+        </x-ui.kartu>
+    @else
+        <div class="grid gap-4 md:grid-cols-2">
+            @foreach ($daftar as $umkm)
+                <x-ui.kartu>
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <h3 class="truncate text-sm font-semibold text-primary-900">{{ $umkm->nama }}</h3>
+                            <p class="truncate text-xs text-gray-500">
+                                {{ $umkm->wilayah?->namaLengkap() ?? 'Wilayah belum diisi' }}
                             </p>
                         </div>
-                        <div class="flex gap-2">
-                            <button wire:click="setujui({{ $u->id }})" class="rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-700">Setujui</button>
-                            <button wire:click="konfirmTolak({{ $u->id }})" class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">Tolak</button>
-                        </div>
+                        <x-ui.lencana :status="$umkm->status"/>
                     </div>
-                @endforeach
-            </div>
+
+                    @if ($umkm->deskripsi)
+                        <p class="mt-3 line-clamp-2 text-sm text-gray-600">{{ $umkm->deskripsi }}</p>
+                    @endif
+
+                    <dl class="mt-4 grid grid-cols-2 gap-3 border-t border-gray-100 pt-4 text-sm">
+                        <div>
+                            <dt class="text-xs text-gray-500">Kontak</dt>
+                            <dd class="truncate text-gray-700">{{ $umkm->email ?? $umkm->phone ?? '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-gray-500">Produk</dt>
+                            <dd class="text-gray-700">{{ number_format($umkm->produk_count) }}</dd>
+                        </div>
+                        <div class="col-span-2">
+                            <dt class="text-xs text-gray-500">Alamat</dt>
+                            <dd class="text-gray-700">{{ $umkm->alamat ?? '—' }}</dd>
+                        </div>
+                    </dl>
+
+                    @if ($umkm->catatan_verifikasi && $umkm->status === StatusUmkm::Ditolak)
+                        <div class="mt-4 rounded-xl bg-red-50 p-3 text-sm">
+                            <p class="text-xs font-semibold text-red-900">Alasan penolakan</p>
+                            <p class="mt-1 whitespace-pre-line text-red-800">{{ $umkm->catatan_verifikasi }}</p>
+                            @if ($umkm->ditinjau_at)
+                                <p class="mt-1.5 text-xs text-red-700">
+                                    {{ $umkm->ditinjau_at->translatedFormat('j M Y, H:i') }}
+                                    @if ($umkm->peninjau) · {{ $umkm->peninjau->name }} @endif
+                                </p>
+                            @endif
+                        </div>
+                    @endif
+
+                    @if ($umkm->status === StatusUmkm::Menunggu)
+                        @if ($tolakId === $umkm->id)
+                            {{--
+                                Alasan diketik di tempat, bukan lewat konfirmasi
+                                peramban. Pemilik usaha membacanya utuh di halaman
+                                statusnya, jadi ia butuh ruang untuk kalimat yang
+                                benar-benar bisa ditindaklanjuti.
+                            --}}
+                            <form wire:submit="tolak" class="mt-4 space-y-3 border-t border-gray-100 pt-4">
+                                <x-ui.bidang label="Alasan penolakan" untuk="catatan-{{ $umkm->id }}" :wajib="true"
+                                             petunjuk="Dibaca langsung oleh pemilik usaha. Sebutkan apa yang harus diperbaiki."
+                                             :galat="$errors->first('catatanTolak')">
+                                    <textarea id="catatan-{{ $umkm->id }}" wire:model="catatanTolak" rows="3"
+                                              placeholder="Contoh: Alamat usaha belum lengkap sampai nama jalan dan nomor, sehingga lokasinya tidak bisa dipastikan."
+                                              class="block w-full rounded-xl border px-3.5 py-2.5 text-sm text-gray-900 shadow-sm
+                                                     transition placeholder:text-gray-400 focus:outline-none focus:ring-4
+                                                     {{ $errors->has('catatanTolak')
+                                                        ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                                                        : 'border-gray-300 focus:border-primary-500 focus:ring-primary-100' }}"></textarea>
+                                </x-ui.bidang>
+
+                                <div class="flex gap-2">
+                                    <x-ui.tombol jenis="bahaya" ukuran="kecil" tipe="submit"
+                                                 wire:loading.attr="disabled" wire:target="tolak">
+                                        Kirim penolakan
+                                    </x-ui.tombol>
+                                    <x-ui.tombol jenis="kedua" ukuran="kecil" type="button" wire:click="batalTolak">
+                                        Batal
+                                    </x-ui.tombol>
+                                </div>
+                            </form>
+                        @else
+                            <div class="mt-4 flex gap-2 border-t border-gray-100 pt-4">
+                                <x-ui.tombol ukuran="kecil" wire:click="setujui({{ $umkm->id }})" ikon="centang"
+                                             wire:confirm="Setujui {{ $umkm->nama }}? Produknya langsung bisa tampil di marketplace.">
+                                    Setujui
+                                </x-ui.tombol>
+                                <x-ui.tombol jenis="bahaya" ukuran="kecil" ikon="silang"
+                                             wire:click="bukaFormTolak({{ $umkm->id }})">
+                                    Tolak
+                                </x-ui.tombol>
+                            </div>
+                        @endif
+                    @elseif ($umkm->status === StatusUmkm::Ditolak)
+                        <div class="mt-4 border-t border-gray-100 pt-4">
+                            <x-ui.tombol jenis="kedua" ukuran="kecil" wire:click="setujui({{ $umkm->id }})"
+                                         wire:confirm="Aktifkan kembali {{ $umkm->nama }}?">
+                                Aktifkan kembali
+                            </x-ui.tombol>
+                            <p class="mt-2 text-xs text-gray-500">
+                                Pemiliknya juga bisa memperbaiki datanya sendiri lalu mengajukan
+                                ulang, dan tokonya akan kembali muncul di daftar "menunggu".
+                            </p>
+                        </div>
+                    @endif
+                </x-ui.kartu>
+            @endforeach
         </div>
+
+        <div class="mt-6">{{ $daftar->links() }}</div>
     @endif
-
-    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <table class="w-full text-left text-sm">
-            <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
-                <tr>
-                    <th class="px-6 py-3 font-semibold">Nama UMKM</th>
-                    <th class="px-6 py-3 font-semibold">Lokasi</th>
-                    <th class="px-6 py-3 font-semibold">Status</th>
-                    <th class="px-6 py-3 text-right font-semibold">Aksi</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                @forelse ($daftar as $u)
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-3 text-primary-900">{{ $u->nama }}</td>
-                        <td class="px-6 py-3 text-gray-600">{{ $u->lat && $u->lng ? 'Ada' : '—' }}</td>
-                        <td class="px-6 py-3">
-                            @if ($u->status === 'aktif')
-                                <span class="rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700">Aktif</span>
-                            @else
-                                <span class="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-600">Ditolak</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-3 text-right">
-                            @if ($u->status === 'aktif')
-                                <button wire:click="edit({{ $u->id }})" class="text-sm font-medium text-primary-500 hover:text-primary-700">Ubah</button>
-                            @endif
-                            <button wire:click="konfirmHapus({{ $u->id }})" class="ml-3 text-sm font-medium text-red-600 hover:text-red-700">Hapus</button>
-                        </td>
-                    </tr>
-                @empty
-                    <tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">Belum ada UMKM.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-
-    <x-modal active="showForm" max-width="max-w-2xl">
-        <form wire:submit="simpan">
-            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-                <h2 class="text-base font-semibold text-primary-900">{{ $editingId ? 'Ubah UMKM' : 'Tambah UMKM' }}</h2>
-                <button type="button" wire:click="batal" class="text-gray-400 hover:text-gray-600">✕</button>
-            </div>
-
-            <div class="max-h-[70vh] overflow-y-auto px-6 py-5">
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div>
-                        <label class="block text-sm font-medium text-primary-900">Nama UMKM</label>
-                        <input wire:model="nama" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                        @error('nama') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-primary-900">Banjar Dinas</label>
-                        <select wire:model="banjar_id" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                            <option value="">— Pilih banjar dinas —</option>
-                            @foreach ($banjarList as $b)
-                                <option value="{{ $b->id }}">{{ $b->nama }} — {{ $b->kelurahan->nama }}</option>
-                            @endforeach
-                        </select>
-                        @error('banjar_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-primary-900">Deskripsi</label>
-                        <textarea wire:model="deskripsi" rows="2" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-primary-900">Alamat</label>
-                        <input wire:model="alamat" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-primary-900">No. HP</label>
-                        <input wire:model="no_hp" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                    </div>
-
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-primary-900">Titik Lokasi</label>
-                        <div class="mt-1"><x-map-picker :lat="$lat" :lng="$lng" /></div>
-                        <div class="mt-2 grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500">Latitude</label>
-                                <input wire:model.blur="lat" placeholder="-8.6478" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                                @error('lat') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500">Longitude</label>
-                                <input wire:model.blur="lng" placeholder="115.1385" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                                @error('lng') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="sm:col-span-2 border-t border-gray-200 pt-4">
-                        <p class="text-xs font-semibold text-gray-400">Akun Admin UMKM</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-primary-900">Nama Admin</label>
-                        <input wire:model="admin_name" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                        @error('admin_name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-primary-900">Email Admin</label>
-                        <input type="email" wire:model="admin_email" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                        @error('admin_email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-primary-900">
-                            Kata sandi Admin @if ($editingId) <span class="font-normal text-gray-400">(kosongkan jika tidak diubah)</span> @endif
-                        </label>
-                        <input type="password" wire:model="admin_password" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                        @error('admin_password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
-                <button type="button" wire:click="batal" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-primary-900 hover:bg-gray-50">Batal</button>
-                <button type="submit" class="rounded-lg bg-primary-500 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-700">{{ $editingId ? 'Perbarui' : 'Simpan' }}</button>
-            </div>
-        </form>
-    </x-modal>
-
-    <x-confirm active="showDelete" action="hapus" title="Hapus UMKM?"
-               message="UMKM, produk, dan akun adminnya akan dihapus permanen." />
-
-    <x-confirm active="showReject" action="tolak" title="Tolak pendaftaran?"
-               message="Pendaftaran UMKM ini akan ditandai ditolak." confirmLabel="Tolak" />
 </div>

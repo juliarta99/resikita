@@ -23,12 +23,35 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!--
+            Uji berjalan di MySQL, bukan SQLite in-memory.
+
+            Resolusi wilayah dan deteksi laporan duplikat menghitung jarak
+            Haversine di dalam query (radians, acos, cos, sin). SQLite
+            bawaan PHP tidak menyediakan fungsi-fungsi itu, sehingga uji
+            di SQLite akan menguji jalur kode yang berbeda dari yang
+            benar-benar berjalan di produksi, atau gagal sama sekali.
+
+            Buat basis datanya sekali: CREATE DATABASE resikita_test;
+        -->
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_DATABASE" value="resikita_test"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!--
+            Kredensial integrasi diisi nilai palsu. Uji memalsukan
+            panggilan HTTP-nya, tapi Service tetap memeriksa bahwa
+            konfigurasinya ada sebelum memanggil penyedia, dan
+            pemeriksaan itu memang harus ikut teruji.
+        -->
+        <env name="RAJAONGKIR_ORIGIN_ID" value="17473"/>
+        <env name="RAJAONGKIR_API_KEY" value="kunci-uji"/>
+        <env name="MIDTRANS_SERVER_KEY" value="kunci-server-uji"/>
+        <env name="MIDTRANS_CLIENT_KEY" value="kunci-klien-uji"/>
+        <env name="GEMINI_API_KEY" value="kunci-gemini-uji"/>
+        <env name="WHATSAPP_DRIVER" value="log"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

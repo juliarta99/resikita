@@ -1,60 +1,68 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Umkm;
 
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Product;
-use Illuminate\Support\Facades\Auth;
-use Livewire\Attributes\Layout;
+use App\Enums\StatusPesanan;
+use App\Models\Pesanan;
+use App\Models\Produk;
+use App\Services\Wallet\UmkmDompetService;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Layout('components.layouts.umkm')]
+/**
+ * Dasbor UMKM.
+ *
+ * Angka yang ditampilkan dipilih dari sudut pandang penjual: pesanan
+ * yang menunggu dikerjakan hari ini, saldo yang bisa ditarik, dan stok
+ * yang hampir habis. Total penjualan sepanjang masa memang enak dilihat,
+ * tapi tidak memberi tahu apa yang harus dilakukan pagi ini.
+ */
+#[Title('Dasbor UMKM')]
 class Dashboard extends Component
 {
-    private const PAID = ['dibayar', 'dikemas', 'dikirim', 'selesai'];
-
-    private function umkmId(): int
+    public function render(UmkmDompetService $dompet)
     {
-        return Auth::user()->umkm_id;
-    }
+        $umkm = auth()->user()->umkm;
 
-    private function pendapatanBulan(int $tahun, int $bulan): float
-    {
-        return (float) OrderItem::whereHas('order', fn ($q) => $q->where('umkm_id', $this->umkmId())
-            ->whereIn('status', self::PAID)->whereYear('created_at', $tahun)->whereMonth('created_at', $bulan))
-            ->sum('subtotal');
-    }
-
-    public function render()
-    {
-        $umkmId = $this->umkmId();
-
-        $labels = [];
-        $data = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $m = now()->subMonths($i);
-            $labels[] = $m->format('M Y');
-            $data[] = $this->pendapatanBulan($m->year, $m->month);
+        if ($umkm === null) {
+            return view('livewire.umkm.dashboard', ['umkm' => null]);
         }
 
-        $top = OrderItem::whereHas('order', fn ($q) => $q->where('umkm_id', $umkmId)->whereIn('status', self::PAID))
-            ->selectRaw('nama_snapshot, SUM(qty) as qty, SUM(subtotal) as revenue')
-            ->groupBy('nama_snapshot')->orderByDesc('qty')->take(5)->get();
+        $pesanan = fn () => Pesanan::query()->where('umkm_id', $umkm->id);
 
         return view('livewire.umkm.dashboard', [
-            'stat' => [
-                'produk'      => Product::where('umkm_id', $umkmId)->count(),
-                'produkAktif' => Product::where('umkm_id', $umkmId)->where('is_active', true)->count(),
-                'pesanan'     => Order::where('umkm_id', $umkmId)->count(),
-                'pesananBln'  => Order::where('umkm_id', $umkmId)->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
-                'pendapatan'  => $this->pendapatanBulan(now()->year, now()->month),
-                'perluProses' => Order::where('umkm_id', $umkmId)->where('status', 'dibayar')->count(),
-            ],
-            'trenLabels' => $labels,
-            'trenData'   => $data,
-            'top'        => $top,
-            'terbaru'    => Order::where('umkm_id', $umkmId)->latest()->take(6)->get(),
+            'umkm' => $umkm,
+            'saldo' => $dompet->saldo($umkm),
+
+            'perluDikemas' => $pesanan()->where('status', StatusPesanan::Dibayar)->count(),
+            'sedangDikirim' => $pesanan()->where('status', StatusPesanan::Dikirim)->count(),
+            'selesaiBulanIni' => $pesanan()
+                ->where('status', StatusPesanan::Selesai)
+                ->where('selesai_at', '>=', now()->startOfMonth())
+                ->count(),
+            'pendapatanBulanIni' => (int) $pesanan()
+                ->where('status', StatusPesanan::Selesai)
+                ->where('selesai_at', '>=', now()->startOfMonth())
+                ->sum('total'),
+
+            'antrean' => $pesanan()
+                ->whereIn('status', [StatusPesanan::Dibayar, StatusPesanan::Dikemas])
+                ->untukDaftar()
+                ->oldest('dibayar_at')
+                ->limit(6)
+                ->get(),
+
+            'stokMenipis' => Produk::query()
+                ->where('umkm_id', $umkm->id)
+                ->aktif()
+                ->where('stok', '<=', 5)
+                ->orderBy('stok')
+                ->limit(6)
+                ->get(),
+
+            'jumlahProduk' => Produk::query()->where('umkm_id', $umkm->id)->aktif()->count(),
         ]);
     }
 }

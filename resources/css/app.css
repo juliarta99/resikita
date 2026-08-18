@@ -1,3 +1,21 @@
+/*
+ * Plus Jakarta Sans, dipasang sendiri lewat Vite, bukan ditarik dari
+ * Google Fonts.
+ *
+ * Alasannya sama dengan ikon SVG sebaris di x-ui.ikon: panel ini harus
+ * tetap utuh ketika jaringan lambat atau CDN luar tidak terjangkau.
+ * Font dari peladen pihak ketiga juga membocorkan alamat IP setiap
+ * pengunjung ke pihak itu, dan halaman publik Resikita bisa diakses
+ * tanpa akun.
+ *
+ * Berkasnya variable weight 200-800, jadi seluruh tingkat ketebalan
+ * yang dipakai antarmuka datang dari satu unduhan. Pemecahan per
+ * unicode-range membuat peramban hanya mengambil subset yang benar-
+ * benar dipakai teks di layar.
+ */
+@import "@fontsource-variable/plus-jakarta-sans/wght.css";
+@import "@fontsource-variable/plus-jakarta-sans/wght-italic.css";
+
 @import "tailwindcss";
 
 /* Scan kelas Tailwind di blade & komponen Livewire */
@@ -6,16 +24,133 @@
 @source "../../vendor/livewire/livewire/src/**/*.blade.php";
 
 @theme {
-    /* Font utama */
-    --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    /*
+     * Font utama. Nama keluarganya "Plus Jakarta Sans Variable" sesuai
+     * @font-face bawaan paket; "Plus Jakarta Sans" disimpan sebagai
+     * cadangan supaya versi yang mungkin sudah terpasang di perangkat
+     * pengguna tetap terpakai.
+     */
+    --font-sans: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
-    /* Palet Niti Resik (default primary = 500) */
+    /* Judul dan teks bersambung memakai keluarga yang sama */
+    --font-serif: var(--font-sans);
+
+    /* Palet Resikita (default primary = 500) */
     --color-primary-50: #e0f8f1;
     --color-primary-100: #a3e6d2;
     --color-primary-500: #057d5d;
     --color-primary-700: #046a4f;
     --color-primary-900: #023628;
     --color-primary: #057d5d;
+
+    /*
+     * Gerak halaman muka.
+     *
+     * Semuanya dekoratif dan tidak membawa informasi apa pun, aturan
+     * prefers-reduced-motion di bawah berkas ini mematikannya tanpa ada
+     * yang hilang dari halaman. Karena itu durasinya panjang dan
+     * jaraknya pendek: hero yang bergerak harus terasa hidup, bukan
+     * menarik perhatian menjauh dari kalimat pertama.
+     */
+    --animate-muncul: muncul 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    --animate-mengambang: mengambang 7s ease-in-out infinite;
+    --animate-mengambang-lambat: mengambang 9s ease-in-out infinite;
+    --animate-hanyut: hanyut 18s ease-in-out infinite;
+    --animate-denyut-titik: denyut-titik 2.4s ease-in-out infinite;
+
+    @keyframes muncul {
+        from {
+            opacity: 0;
+            transform: translateY(1rem);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes mengambang {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-0.875rem);
+        }
+    }
+
+    /*
+     * Dua gumpalan latar memakai keyframe yang sama dengan durasi
+     * berbeda, sehingga keduanya tidak pernah bergerak seirama. Gerak
+     * yang sinkron terbaca sebagai satu blok yang bergeser, bukan
+     * sebagai kedalaman.
+     */
+    @keyframes hanyut {
+        0%, 100% {
+            transform: translate3d(0, 0, 0) scale(1);
+        }
+        33% {
+            transform: translate3d(1.5rem, -1rem, 0) scale(1.06);
+        }
+        66% {
+            transform: translate3d(-1rem, 1.25rem, 0) scale(0.96);
+        }
+    }
+
+    @keyframes denyut-titik {
+        0% {
+            transform: scale(1);
+            opacity: 0.7;
+        }
+        70%, 100% {
+            transform: scale(2.4);
+            opacity: 0;
+        }
+    }
+}
+
+/*
+ * Sembunyikan elemen ber-x-cloak sampai Alpine mengambil alih.
+ *
+ * Tanpa aturan ini, setiap modal, laci navigasi, dan pemberitahuan
+ * melayang tampil utuh selama sepersekian detik pertama sebelum Alpine
+ * sempat menyembunyikannya. Yang terlihat pengguna adalah halaman yang
+ * berkedip dan seolah rusak, kegagalan yang paling mudah dianggap
+ * masalah jaringan, padahal sebenarnya satu baris CSS yang hilang.
+ */
+[x-cloak] {
+    display: none !important;
+}
+
+/*
+ * Cincin fokus yang selalu terlihat.
+ *
+ * Reset Tailwind menghapus outline bawaan peramban. Elemen yang tidak
+ * menyatakan gaya fokusnya sendiri karena itu menjadi tidak bisa
+ * ditelusuri dengan papan tik sama sekali, dan itu memutus seluruh
+ * panel bagi pengguna yang tidak memakai tetikus.
+ */
+:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+    border-radius: 0.375rem;
+}
+
+/*
+ * Hormati permintaan pengurangan gerak dari sistem operasi.
+ *
+ * Animasi denyut, transisi laci, dan gerak modal bisa memicu pusing
+ * atau mual bagi sebagian orang. Ketika pengguna sudah menyatakannya di
+ * pengaturan perangkatnya, tidak ada alasan aplikasi ini mengabaikannya.
+ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 /* Konten artikel (hasil render Markdown) */
